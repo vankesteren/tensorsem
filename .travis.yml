@@ -1,7 +1,9 @@
 language: r
 cache: packages
 latex: false
-
+before-install:
+  - R -e 'devtools::install_github("tensorflow")'
+  - R -e 'tensorflow::install_tensorflow()'
 matrix:
   include:
     - os: linux
