@@ -2,7 +2,7 @@ language: r
 cache: packages
 latex: false
 before_install:
-  - R -e 'devtools::install_github("tensorflow")'
+  - R -e 'devtools::install_github("rstudio/tensorflow")'
   - R -e 'tensorflow::install_tensorflow()'
 matrix:
   include:
