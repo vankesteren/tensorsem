@@ -7,7 +7,7 @@
 tf_sem(lav_model, data, fit = FALSE)
 }
 \arguments{
-\item{lav_model}{A lavaan syntax model}
+\item{lav_model}{A lavaan syntax model. See details for restrictions.}
 
 \item{data}{A data frame. Only numeric variables supported.}
 
@@ -19,6 +19,16 @@ a tf_sem object. See below.
 \description{
 This function converts lavaan code and a dataset to a TensorFlow object. This
 object can then be used to train the model and view estimates.
+}
+\details{
+The tf_sem function supports only a subset of the lavaan syntax as of now:
+\itemize{
+  \item{Only datasets with numeric values and no missing data}
+  \item{Only regression ("~"), factor loadings ("=~") and variances ("~~")}
+  \item{No multigroup SEM}
+  \item{No intercepts / means}
+  \item{No equality / inequality constraints}
+}
 }
 \section{Using the \code{tf_sem} object}{
 
@@ -45,8 +55,30 @@ See below the available methods and extractable information from the resulting o
   \item{\code{tf_mod$summary()}}{Prints summary information, including all the model matrices.}
   \item{\code{tf_mod$gradients()}}{Prints gradient for each element of the parameter matrices.}
   \item{\code{tf_mod$plot_loss()}}{
-     Plots the loss curve with iteration number on the x-axis and the
-     value of the loss function on the y-axis.
+    Plots the loss curve with iteration number on the x-axis and the
+    value of the loss function on the y-axis.
+  }
+  \item{\code{tf_mod$Sigma}}{Returns the Sigma matrix}
+  \item{\code{tf_mod$Psi}}{Returns the Psi matrix}
+  \item{\code{tf_mod$Beta}}{Returns the Beta matrix}
+  \item{\code{tf_mod$Lambda}}{Returns the Lambda matrix}
+  \item{\code{tf_mod$Theta}}{Returns the Theta matrix}
+  \item{\code{tf_mod$Psi_grad}}{Returns the gradient of the Psi matrix}
+  \item{\code{tf_mod$Beta_grad}}{Returns the gradient of the Beta matrix}
+  \item{\code{tf_mod$Lambda_grad}}{Returns the gradient of the Lambda matrix}
+  \item{\code{tf_mod$Theta_grad}}{Returns the gradient of the Theta matrix}
+  \item{\code{tf_mod$data}}{Returns the observed covariance matrix}
+  \item{\code{tf_mod$loss}}{Returns the current value of the loss function}
+  \item{\code{tf_mod$loglik}}{Returns the current log-likelihood value}
+  \item{\code{tf_mod$delta}}{Returns the full delta parameter vector}
+  \item{\code{tf_mod$delta_idx}}{Returns the indices of the free elements of delta}
+  \item{\code{tf_mod$delta_free}}{Returns the values of the free elements of delta}
+  \item{\code{tf_mod$delta_grad}}{Returns the gradient of the loss w.r.t. delta}
+  \item{\code{tf_mod$delta_hess}}{Returns the hessian of the loss w.r.t. delta}
+  \item{\code{tf_mod$ACOV}}{
+    Returns the asymptotic covariance matrix of the free elements of delta,
+    assuming that the loss function is proportional to the maximum likelihood
+    fit function.
   }
 }
 }
