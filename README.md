@@ -16,5 +16,5 @@ An `R` package for structural equation modeling using TensorFlow
 1. Install tensorflow for R by following the instructions on the [RStudio website](https://tensorflow.rstudio.com/tensorflow/)
 2. Install the tensorsem package from this repository as follows:
 ```r
-devtools::install_github("vankesteren/cmfilter")
+devtools::install_github("vankesteren/tensorsem")
 ```
