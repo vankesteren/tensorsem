@@ -33,7 +33,11 @@ tf_sem_object <- R6Class(
       }
 
       for (iter in 1:niter) {
-        self$tf_session$session$run(self$tf_session$train)
+        self$tf_session$session$run(self$tf_session$dat$dat_iter$initializer)
+
+        tfdatasets::until_out_of_range(
+          self$tf_session$session$run(self$tf_session$train)
+        )
 
         loss_vec[iter] <- self$loss
 
@@ -122,8 +126,15 @@ tf_sem_object <- R6Class(
       colnames(dat) <- rownames(dat) <- self$tf_session$v_names[self$tf_session$v_trans]
       dat
     },
-    loss          = function() { self$tf_session$session$run(self$tf_session$loss) },
-    loglik        = function() { (-(self$sample_size - 1) / 2) * (ncol(self$data) * log(2 * pi) + self$loss) },
+    loss          = function() {
+      self$tf_session$session$run(self$tf_session$dat$dat_iter$initializer)
+      loss <- 0.0
+      tfdatasets::until_out_of_range(
+        loss <- loss + self$tf_session$session$run(self$tf_session$loss)
+      )
+      loss
+    },
+    loglik        = function() { (-(self$sample_size - 1) / 2) * (ncol(self$data) * log(2 * pi) - self$loss) },
 
     # param vec
     delta         = function() { self$tf_session$session$run(self$tf_session$dlt_vec) },

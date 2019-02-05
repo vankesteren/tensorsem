@@ -8,18 +8,22 @@ tf_pars_to_session <- function(params) {
   tf_env <- new.env()
 
   with(tf_env, {
+
+    dat       <- create_tf_data(params$data_mat)
+
     # info
     v_trans   <- params$cov_map$v_trans
     v_itrans  <- params$cov_map$v_itrans
     v_names   <- params$cov_map$v_names
-    S         <- tf$constant(params$S_data[v_trans, v_trans], dtype = "float64")
+
+
 
     # Parameter vector
-    dlt_init  <- tf$constant(params$delta_start, dtype = "float64")
-    dlt_free  <- tf$constant(params$delta_free,  dtype = "float64")
-    dlt_value <- tf$constant(params$delta_value, dtype = "float64")
+    dlt_init  <- tf$constant(params$delta_start, dtype = "float32")
+    dlt_free  <- tf$constant(params$delta_free,  dtype = "float32")
+    dlt_value <- tf$constant(params$delta_value, dtype = "float32")
     dlt_vec   <- tf$Variable(initial_value =          dlt_init * dlt_free + dlt_value,
-                             constraint    = function(dlt) dlt * dlt_free + dlt_value, dtype = "float64")
+                             constraint    = function(dlt) dlt * dlt_free + dlt_value, dtype = "float32")
 
     vec_sizes <- tf$constant(vapply(params$idx, length, 1L), dtype = "int64")
     dlt_split <- tf$split(dlt_vec, vec_sizes)
@@ -37,7 +41,7 @@ tf_pars_to_session <- function(params) {
 
     # Psi matrix
     if (params$mat_size$psi[1] > 1L) {
-      psi_dup <- tf$constant(matrixcalc::duplication.matrix(params$mat_size$psi[1]), dtype = "float64")
+      psi_dup <- tf$constant(matrixcalc::duplication.matrix(params$mat_size$psi[1]), dtype = "float32")
       psi_cc  <- tf$matmul(psi_dup, tf$expand_dims(psi_vec, 1L))
       Psi     <- tf$reshape(psi_cc, shape(params$mat_size$psi[1], params$mat_size$psi[2]))
     } else {
@@ -49,7 +53,7 @@ tf_pars_to_session <- function(params) {
       B_0     <- tf$reshape(b_0_vec, shape(params$mat_size$beta[1], params$mat_size$beta[2]))
     } else {
       b_0_com <- tf$constant(matrixcalc::commutation.matrix(params$mat_size$beta[1], params$mat_size$beta[2]),
-                             dtype = "float64")
+                             dtype = "float32")
       B_0     <- tf$reshape(tf$matmul(b_0_com, tf$expand_dims(b_0_vec, 1L)),
                             shape(params$mat_size$beta[1], params$mat_size$beta[2]))
     }
@@ -59,32 +63,35 @@ tf_pars_to_session <- function(params) {
       Lambda  <- tf$reshape(lam_vec, shape(params$mat_size$lambda[1], params$mat_size$lambda[2]))
     } else {
       lam_com <- tf$constant(matrixcalc::commutation.matrix(params$mat_size$lambda[1], params$mat_size$lambda[2]),
-                             dtype = "float64")
+                             dtype = "float32")
       Lambda  <- tf$reshape(tf$matmul(lam_com, tf$expand_dims(lam_vec, 1L)),
                             shape(params$mat_size$lambda[1], params$mat_size$lambda[2]))
     }
 
     # Theta matrix
-    tht_dup   <- tf$constant(matrixcalc::duplication.matrix(params$mat_size$theta[1]), dtype = "float64")
+    tht_dup   <- tf$constant(matrixcalc::duplication.matrix(params$mat_size$theta[1]), dtype = "float32")
     tht_cc    <- tf$matmul(tht_dup, tf$expand_dims(tht_vec, 1L))
 
     Theta     <- tf$reshape(tht_cc, shape(params$mat_size$theta[1],
                                           params$mat_size$theta[2]))
 
-    # loss function
-    I_mat     <- tf$eye(params$mat_size$beta[1], dtype = "float64")
+    # Get Sigma
+    I_mat     <- tf$eye(params$mat_size$beta[1], dtype = "float32")
     B         <- I_mat - B_0
     B_inv     <- tf$matrix_inverse(B)
     Sigma     <- tf$matmul(tf$matmul(Lambda, tf$matmul(tf$matmul(B_inv, Psi), B_inv, transpose_b = TRUE)),
                            Lambda, transpose_b = TRUE) + Theta
-    Sigma_inv <- tf$matrix_inverse(Sigma)
-    loss      <- tf$linalg$logdet(Sigma) + tf$linalg$trace(tf$matmul(S, Sigma_inv))
+
+    # Data batch
+    N         <- tf$constant(dat$b_size, dtype = "float32")
+    Z         <- dat$next_batch
+    S         <- tf$matmul(Z$x, Z$x, transpose_a = TRUE) / N
+
+    # Loss function
+    loss      <- (tf$linalg$logdet(Sigma) + tf$linalg$trace(tf$matmul(S, tf$matrix_inverse(Sigma)))) * N / 2
 
     # abs diff gets really close to original estimates without inversion!
     # loss      <- tf$reduce_sum(tf$abs(Sigma - S))
-
-    # loglik term
-    logdetS   <- tf$linalg$logdet(S)
 
     # gradients
     if (params$mat_size$psi[1] > 1L) {
@@ -108,9 +115,15 @@ tf_pars_to_session <- function(params) {
     dlt_H     <- tf$hessians(loss, dlt_vec)
 
 
-    # optim
-    optim <- tf$train$AdamOptimizer()
-    train <- optim$minimize(loss)
+    # polyak average _all the things_
+    polyak    <- tf$train$ExponentialMovingAverage(decay = .998)
+    polyak_v  <- ema$apply(tensorflow::tuple(B_0, Psi, Lambda, Theta))
+
+    with(tf$control_dependencies(tensorflow::tuple(polyak_v)), {
+      optim  <- tf$train$AdamOptimizer()
+      train  <- optim$minimize(loss)
+    })
+
 
     session <- tf$Session()
     session$run(tf$global_variables_initializer())
