@@ -35,11 +35,13 @@ tf_sem_object <- R6Class(
       for (iter in 1:niter) {
         self$tf_session$session$run(self$tf_session$dat$dat_iter$initializer)
 
-        tfdatasets::until_out_of_range(
-          self$tf_session$session$run(self$tf_session$train)
-        )
+        loss <- 0.0
+        tfdatasets::until_out_of_range({
+          result <- self$tf_session$session$run(list(self$tf_session$loss, self$tf_session$train))
+          loss <- loss + result[[1]]
+        })
 
-        loss_vec[iter] <- self$loss
+        loss_vec[iter] <- loss
 
         if (pb && !verbose) progbar$tick(tokens = list(loss = format(round(loss_vec[iter], 5), nsmall = 5)))
 
@@ -65,7 +67,7 @@ tf_sem_object <- R6Class(
     },
     summary       = function() {
       cat("\nTensorFlow SEM session\n----------------------\n\n")
-      loss <- tryCatch(self$tf_session$session$run(self$tf_session$loss), error = function(e) Inf)
+      loss <- tryCatch(self$loss, error = function(e) Inf)
       cat("Loss:", loss, "\n")
       cat("\n\nSigma:\n")
       print(self$Sigma)
@@ -93,7 +95,7 @@ tf_sem_object <- R6Class(
 
       return(invisible(self))
     },
-    plot_loss     = function() {
+    plot_loss     = function(...) {
       if (length(self$loss_vec) < 2) stop("Too few iterations to plot loss.")
       plot(x    = 1:length(self$loss_vec),
            y    = self$loss_vec,
@@ -102,28 +104,33 @@ tf_sem_object <- R6Class(
            main = "Loss plot",
            bty  = "L",
            type = "l",
-           col  = "#00008b"
+           col  = "#00008b",
+           ...
       )
     }
   ),
   active = list(
     # matrices
-    Sigma         = function() { self$tf_session$session$run(self$tf_session$Sigma) },
-    Psi           = function() { self$tf_session$session$run(self$tf_session$Psi) },
-    Beta          = function() { self$tf_session$session$run(self$tf_session$B_0) },
-    Lambda        = function() { self$tf_session$session$run(self$tf_session$Lambda) },
-    Theta         = function() { self$tf_session$session$run(self$tf_session$Theta) },
+    Sigma         = function() { self$tf_session$session$run(self$tf_session$polyak$average(self$tf_session$Sigma)) },
+    Psi           = function() { self$tf_session$session$run(self$tf_session$polyak$average(self$tf_session$Psi)) },
+    Beta          = function() { self$tf_session$session$run(self$tf_session$polyak$average(self$tf_session$B_0)) },
+    Lambda        = function() { self$tf_session$session$run(self$tf_session$polyak$average(self$tf_session$Lambda)) },
+    Theta         = function() { self$tf_session$session$run(self$tf_session$polyak$average(self$tf_session$Theta)) },
 
     # gradients
-    Psi_grad      = function() { self$tf_session$session$run(self$tf_session$Psi_g) },
-    Beta_grad     = function() { self$tf_session$session$run(self$tf_session$B_0_g) },
-    Lambda_grad   = function() { self$tf_session$session$run(self$tf_session$Lambda_g) },
-    Theta_grad    = function() { self$tf_session$session$run(self$tf_session$Theta_g) },
+    Psi_grad      = function() { self$tf_session$session$run(self$tf_session$polyak$average(self$tf_session$Psi_g)) },
+    Beta_grad     = function() { self$tf_session$session$run(self$tf_session$polyak$average(self$tf_session$B_0_g)) },
+    Lambda_grad   = function() {
+      self$tf_session$session$run(self$tf_session$polyak$average(self$tf_session$Lambda_g))
+    },
+    Theta_grad    = function() {
+      self$tf_session$session$run(self$tf_session$polyak$average(self$tf_session$Theta_g))
+    },
 
     # data & loss
     data          = function() {
-      dat <- self$tf_session$session$run(self$tf_session$S)
-      colnames(dat) <- rownames(dat) <- self$tf_session$v_names[self$tf_session$v_trans]
+      dat <- self$tf_session$dat$dat_mat
+      colnames(dat) <- self$tf_session$v_names[self$tf_session$v_trans]
       dat
     },
     loss          = function() {
@@ -134,18 +141,21 @@ tf_sem_object <- R6Class(
       )
       loss
     },
-    loglik        = function() { (-(self$sample_size - 1) / 2) * (ncol(self$data) * log(2 * pi) - self$loss) },
+    loglik        = function() { (-(self$sample_size - 1) / 2) * (ncol(self$tf_session$dat$n_col) * log(2 * pi) - self$loss) },
 
     # param vec
-    delta         = function() { self$tf_session$session$run(self$tf_session$dlt_vec) },
+    delta         = function() { self$tf_session$session$run(self$tf_session$polyak$average(self$tf_session$dlt_vec)) },
     delta_idx     = function() { which(self$tf_session$session$run(self$tf_session$dlt_free) == 1) },
-    delta_free    = function() { self$tf_session$session$run(self$tf_session$dlt_fre) },
-    delta_grad    = function() { self$tf_session$session$run(self$tf_session$dlt_g) },
-    delta_hess    = function() { self$tf_session$session$run(self$tf_session$dlt_H)[[1]] },
+    delta_free    = function() { self$tf_session$session$run(self$tf_session$polyak$average(self$tf_session$dlt_fre)) },
+    delta_grad    = function() { self$tf_session$session$run(self$tf_session$polyak$average(self$tf_session$dlt_g)) },
+    delta_hess    = function() {
+      self$tf_session$session$run(self$tf_session$polyak$average(self$tf_session$dlt_H[[1]]))
+    },
     ACOV          = function() {
-      idx <- self$delta_idx
+      # only valid with ml_loss
       hes <- self$delta_hess
-      (2 / (self$sample_size - 1)) * solve(hes[idx, idx])
+      idx <- self$delta_idx
+      (1 / (self$sample_size - 1)) * solve(hes[idx, idx])
     }
   )
 )

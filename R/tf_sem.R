@@ -6,6 +6,8 @@
 #' @param lav_model A lavaan syntax model. See details for restrictions.
 #' @param data A data frame. Only numeric variables supported.
 #' @param fit (optional) train the model for 2000 iterations upon creation
+#' @param loss expression
+#' @param ... any hyperparameters used in the loss function
 #'
 #' @details The tf_sem function supports only a subset of the lavaan syntax as of now:
 #' \itemize{
@@ -71,14 +73,16 @@
 #' }
 #'
 #' @examples
-#' mod    <- "x1 ~ x2 + x3"
-#' dat    <- lavaan::HolzingerSwineford1939
-#' tf_mod <- tf_sem(mod, dat)
-#' tf_mod$train(2000)
-#' tf_mod$summary()
+#' \donttest{
+#'   mod    <- "x1 ~ x2 + x3"
+#'   dat    <- lavaan::HolzingerSwineford1939
+#'   tf_mod <- tf_sem(mod, dat)
+#'   tf_mod$train(50)
+#'   tf_mod$summary()
+#' }
 #'
 #' @export
-tf_sem <- function(lav_model, data, fit = FALSE) {
+tf_sem <- function(lav_model, data, fit = FALSE, loss = ml_loss, ...) {
 
   tf_params     <- lav_to_tf_pars(lav_model, data)
   tf_session    <- tf_pars_to_session(tf_params)

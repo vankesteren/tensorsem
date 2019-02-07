@@ -9,6 +9,6 @@ test_that("model is created", {
 test_that("training works", {
   tf_mod$train(25)
   expect_equal(length(tf_mod$loss_vec), 26)
-  expect_lt(tf_mod$loss, 541)
+  expect_lt(tf_mod$loss, 540)
 })
 

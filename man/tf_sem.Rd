@@ -4,7 +4,7 @@
 \alias{tf_sem}
 \title{Perform structural equation modeling with TensorFlow}
 \usage{
-tf_sem(lav_model, data, fit = FALSE)
+tf_sem(lav_model, data, fit = FALSE, loss = ml_loss, ...)
 }
 \arguments{
 \item{lav_model}{A lavaan syntax model. See details for restrictions.}
@@ -12,6 +12,10 @@ tf_sem(lav_model, data, fit = FALSE)
 \item{data}{A data frame. Only numeric variables supported.}
 
 \item{fit}{(optional) train the model for 2000 iterations upon creation}
+
+\item{loss}{expression}
+
+\item{...}{any hyperparameters used in the loss function}
 }
 \value{
 a tf_sem object. See below.
@@ -84,10 +88,12 @@ See below the available methods and extractable information from the resulting o
 }
 
 \examples{
-mod    <- "x1 ~ x2 + x3"
-dat    <- lavaan::HolzingerSwineford1939
-tf_mod <- tf_sem(mod, dat)
-tf_mod$train(2000)
-tf_mod$summary()
+\donttest{
+  mod    <- "x1 ~ x2 + x3"
+  dat    <- lavaan::HolzingerSwineford1939
+  tf_mod <- tf_sem(mod, dat)
+  tf_mod$train(50)
+  tf_mod$summary()
+}
 
 }

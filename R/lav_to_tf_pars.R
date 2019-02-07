@@ -109,6 +109,7 @@ lav_to_tf_pars <- function(mod, data) {
     delta_value = delta_value,
     data_mat    = scale(as.matrix(sub_dat)[, v_trans], scale = FALSE),
     miss_mat    = mis_mat[,v_trans],
+    loss_fun    = ml_loss,
     cov_map     = list(
       v_trans  = v_trans,
       v_itrans = v_itrans,
