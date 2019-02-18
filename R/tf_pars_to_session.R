@@ -8,6 +8,15 @@ tf_pars_to_session <- function(params) {
   tf_env <- new.env()
 
   with(tf_env, {
+
+    # penalties
+    lasso_beta   <- tf$placeholder(dtype = "float64", shape = shape(), name = "lasso_beta")
+    lasso_lambda <- tf$placeholder(dtype = "float64", shape = shape(), name = "lasso_lambda")
+    lasso_psi    <- tf$placeholder(dtype = "float64", shape = shape(), name = "lasso_psi")
+    ridge_beta   <- tf$placeholder(dtype = "float64", shape = shape(), name = "ridge_beta")
+    ridge_lambda <- tf$placeholder(dtype = "float64", shape = shape(), name = "ridge_lambda")
+    ridge_psi    <- tf$placeholder(dtype = "float64", shape = shape(), name = "ridge_psi")
+
     # info
     v_trans   <- params$cov_map$v_trans
     v_itrans  <- params$cov_map$v_itrans
@@ -78,10 +87,24 @@ tf_pars_to_session <- function(params) {
     Sigma     <- tf$matmul(tf$matmul(Lambda, tf$matmul(tf$matmul(B_inv, Psi), B_inv, transpose_b = TRUE)),
                            Lambda, transpose_b = TRUE) + Theta
     Sigma_inv <- tf$matrix_inverse(Sigma)
-    loss      <- tf$linalg$logdet(Sigma) + tf$linalg$trace(tf$matmul(S, Sigma_inv))
 
-    # abs diff gets really close to original estimates without inversion!
-    # loss      <- tf$reduce_sum(tf$abs(Sigma - S))
+    # penalties
+    penalty <-
+      lasso_beta   * tf$reduce_sum(tf$abs(B_0)) +
+      lasso_lambda * tf$reduce_sum(tf$abs(Lambda)) +
+      lasso_psi    * tf$reduce_sum(tf$abs(Psi)) +
+      ridge_beta   * tf$reduce_sum(tf$square(B_0)) +
+      ridge_lambda * tf$reduce_sum(tf$square(Lambda)) +
+      ridge_psi    * tf$reduce_sum(tf$square(Psi))
+
+    # fit function
+    fit <- switch(params$fit_fun,
+      ml  = tf$linalg$logdet(Sigma) + tf$linalg$trace(tf$matmul(S, Sigma_inv)),
+      lad = tf$reduce_sum(tf$abs(Sigma - S))
+    )
+
+
+    loss      <- fit + penalty
 
     # loglik term
     logdetS   <- tf$linalg$logdet(S)

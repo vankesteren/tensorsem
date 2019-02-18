@@ -14,15 +14,27 @@ tf_sem_object <- R6Class(
     lav_model     = NULL,
     sample_size   = NULL,
     loss_vec      = NULL,
+    penalties     = list(
+      lasso_beta   = 0.0,
+      lasso_lambda = 0.0,
+      lasso_psi    = 0.0,
+      ridge_beta   = 0.0,
+      ridge_lambda = 0.0,
+      ridge_psi    = 0.0
+    ),
+    feed          = NULL,
     initialize    = function(tf_session, mod, sample_size) {
       self$tf_session  <- tf_session
       self$lav_model   <- mod
-      self$loss_vec    <- self$loss
       self$sample_size <- sample_size
+      private$update_feed()
+      self$loss_vec    <- self$loss
     },
 
     # Methods
     train         = function(niter = 10000, pb = TRUE, verbose = FALSE) {
+      private$update_feed()
+
       loss_vec <- numeric(niter)
 
       if (verbose) {
@@ -33,7 +45,7 @@ tf_sem_object <- R6Class(
       }
 
       for (iter in 1:niter) {
-        self$tf_session$session$run(self$tf_session$train)
+        private$run(self$tf_session$train)
 
         loss_vec[iter] <- self$loss
 
@@ -61,7 +73,7 @@ tf_sem_object <- R6Class(
     },
     summary       = function() {
       cat("\nTensorFlow SEM session\n----------------------\n\n")
-      loss <- tryCatch(self$tf_session$session$run(self$tf_session$loss), error = function(e) Inf)
+      loss <- tryCatch(private$run(self$tf_session$loss), error = function(e) Inf)
       cat("Loss:", loss, "\n")
       cat("\n\nSigma:\n")
       print(self$Sigma)
@@ -102,35 +114,46 @@ tf_sem_object <- R6Class(
       )
     }
   ),
+  private = list(
+    update_feed   = function() {
+      # create hyperparameter feed
+      feed_list        <- self$penalties
+      names(feed_list) <- sapply(names(self$penalties), function(n) self$tf_session[[n]]$name)
+      self$feed        <- tensorflow::dict(feed_list)
+    },
+    run           = function(...) {
+      self$tf_session$session$run(..., feed_dict = self$feed)
+    }
+  ),
   active = list(
     # matrices
-    Sigma         = function() { self$tf_session$session$run(self$tf_session$Sigma) },
-    Psi           = function() { self$tf_session$session$run(self$tf_session$Psi) },
-    Beta          = function() { self$tf_session$session$run(self$tf_session$B_0) },
-    Lambda        = function() { self$tf_session$session$run(self$tf_session$Lambda) },
-    Theta         = function() { self$tf_session$session$run(self$tf_session$Theta) },
+    Sigma         = function() { private$run(self$tf_session$Sigma) },
+    Psi           = function() { private$run(self$tf_session$Psi) },
+    Beta          = function() { private$run(self$tf_session$B_0) },
+    Lambda        = function() { private$run(self$tf_session$Lambda) },
+    Theta         = function() { private$run(self$tf_session$Theta) },
 
     # gradients
-    Psi_grad      = function() { self$tf_session$session$run(self$tf_session$Psi_g) },
-    Beta_grad     = function() { self$tf_session$session$run(self$tf_session$B_0_g) },
-    Lambda_grad   = function() { self$tf_session$session$run(self$tf_session$Lambda_g) },
-    Theta_grad    = function() { self$tf_session$session$run(self$tf_session$Theta_g) },
+    Psi_grad      = function() { private$run(self$tf_session$Psi_g) },
+    Beta_grad     = function() { private$run(self$tf_session$B_0_g) },
+    Lambda_grad   = function() { private$run(self$tf_session$Lambda_g) },
+    Theta_grad    = function() { private$run(self$tf_session$Theta_g) },
 
     # data & loss
     data          = function() {
-      dat <- self$tf_session$session$run(self$tf_session$S)
+      dat <- private$run(self$tf_session$S)
       colnames(dat) <- rownames(dat) <- self$tf_session$v_names[self$tf_session$v_trans]
       dat
     },
-    loss          = function() { self$tf_session$session$run(self$tf_session$loss) },
+    loss          = function() { private$run(self$tf_session$loss) },
     loglik        = function() { (-(self$sample_size - 1) / 2) * (ncol(self$data) * log(2 * pi) + self$loss) },
 
     # param vec
-    delta         = function() { self$tf_session$session$run(self$tf_session$dlt_vec) },
-    delta_idx     = function() { which(self$tf_session$session$run(self$tf_session$dlt_free) == 1) },
-    delta_free    = function() { self$tf_session$session$run(self$tf_session$dlt_fre) },
-    delta_grad    = function() { self$tf_session$session$run(self$tf_session$dlt_g) },
-    delta_hess    = function() { self$tf_session$session$run(self$tf_session$dlt_H)[[1]] },
+    delta         = function() { private$run(self$tf_session$dlt_vec) },
+    delta_idx     = function() { which(private$run(self$tf_session$dlt_free) == 1) },
+    delta_free    = function() { private$run(self$tf_session$dlt_fre) },
+    delta_grad    = function() { private$run(self$tf_session$dlt_g) },
+    delta_hess    = function() { private$run(self$tf_session$dlt_H)[[1]] },
     ACOV          = function() {
       idx <- self$delta_idx
       hes <- self$delta_hess

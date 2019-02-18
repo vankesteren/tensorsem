@@ -78,11 +78,12 @@
 #' tf_mod$summary()
 #'
 #' @export
-tf_sem <- function(lav_model, data, fit = FALSE) {
+tf_sem <- function(lav_model, data, fit_fun = "ml", fit = FALSE) {
 
-  tf_params     <- lav_to_tf_pars(lav_model, data)
-  tf_session    <- tf_pars_to_session(tf_params)
-  tf_sem_object <- tf_sem_object$new(tf_session, lav_model, nrow(data))
+  tf_params         <- lav_to_tf_pars(lav_model, data)
+  tf_params$fit_fun <- fit_fun
+  tf_session        <- tf_pars_to_session(tf_params)
+  tf_sem_object     <- tf_sem_object$new(tf_session, lav_model, nrow(data))
 
   if (fit) tf_sem_object$train(2000)
 
