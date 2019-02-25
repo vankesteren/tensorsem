@@ -54,7 +54,7 @@ lav_to_tf_pars <- function(mod, data) {
   # create vectors
   psi_vec <- matrixcalc::vech(lav_mod@GLIST$psi)
   if (is.null(lav_mod@GLIST$beta)) {
-    b_0_vec <- 0
+    b_0_vec <- rep(0, prod(dim(lav_mod@GLIST$psi)))
   } else {
     b_0_vec <- matrixcalc::vec(lav_mod@GLIST$beta)
   }
@@ -73,7 +73,7 @@ lav_to_tf_pars <- function(mod, data) {
 
   psi_free <- matrixcalc::vech(glist_free$psi)
   if (is.null(glist_free$beta)) {
-    b_0_free <- 0
+    b_0_free <- rep(0, prod(dim(lav_mod@GLIST$psi)))
   } else {
     b_0_free <- matrixcalc::vec(glist_free$beta)
   }
@@ -94,7 +94,7 @@ lav_to_tf_pars <- function(mod, data) {
 
   # matrix sizes
   mat_siz <- lapply(lav_mod@GLIST, dim)
-  if (is.null(mat_siz$beta)) mat_siz$beta <- c(1L, 1L)
+  if (is.null(mat_siz$beta)) mat_siz$beta <- mat_siz$psi
 
   return(list(
     mat_size    = mat_siz,
