@@ -4,7 +4,7 @@
 \alias{tf_sem}
 \title{Perform structural equation modeling with TensorFlow}
 \usage{
-tf_sem(lav_model, data, fit = FALSE)
+tf_sem(lav_model, data, fit_fun = "ml", fit = FALSE)
 }
 \arguments{
 \item{lav_model}{A lavaan syntax model. See details for restrictions.}
