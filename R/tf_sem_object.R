@@ -14,15 +14,26 @@ tf_sem_object <- R6Class(
     lav_model     = NULL,
     sample_size   = NULL,
     loss_vec      = NULL,
+    penalties     = list(
+      lasso_beta   = 0.0,
+      lasso_lambda = 0.0,
+      lasso_psi    = 0.0,
+      ridge_beta   = 0.0,
+      ridge_lambda = 0.0,
+      ridge_psi    = 0.0
+    ),
+    feed = NULL,
     initialize    = function(tf_session, mod, sample_size) {
       self$tf_session  <- tf_session
       self$lav_model   <- mod
-      self$loss_vec    <- self$loss
       self$sample_size <- sample_size
+      private$update_feed()
+      self$loss_vec    <- self$loss
     },
 
     # Methods
     train         = function(niter = 10000, pb = TRUE, verbose = FALSE) {
+      private$update_feed()
       loss_vec <- numeric(niter)
 
       if (verbose) {
@@ -33,12 +44,12 @@ tf_sem_object <- R6Class(
       }
 
       for (iter in 1:niter) {
-        self$tf_session$session$run(self$tf_session$dat$dat_iter$initializer)
+        private$run(self$tf_session$dat$dat_iter$initializer)
 
         loss <- 0.0
         tfdatasets::until_out_of_range({
-          result <- self$tf_session$session$run(list(self$tf_session$loss, self$tf_session$train))
-          loss <- loss + result[[1]]
+          result <- private$run(list(self$tf_session$loss, self$tf_session$train))
+          loss   <- loss + result[[1]]
         })
 
         loss_vec[iter] <- loss
@@ -50,7 +61,7 @@ tf_sem_object <- R6Class(
           if (length(freeparams) > 10) freeparams <- freeparams[1:10]
 
           cat(str_pad(iter, nchar(niter)), " | ",
-              format(round(self$loss, 5), nsmall = 5), " | ",
+              format(round(loss_vec[iter], 5), nsmall = 5), " | ",
               format(round(freeparams,  3), nsmall = 3), "\n")
         }
       }
@@ -109,22 +120,33 @@ tf_sem_object <- R6Class(
       )
     }
   ),
+  private = list(
+    update_feed   = function() {
+      # create hyperparameter feed
+      feed_list        <- self$penalties
+      names(feed_list) <- sapply(names(self$penalties), function(n) self$tf_session[[n]]$name)
+      self$feed        <- tensorflow::dict(feed_list)
+    },
+    run           = function(...) {
+      self$tf_session$session$run(..., feed_dict = self$feed)
+    }
+  ),
   active = list(
     # matrices
-    Sigma         = function() { self$tf_session$session$run(self$tf_session$polyak$average(self$tf_session$Sigma)) },
-    Psi           = function() { self$tf_session$session$run(self$tf_session$polyak$average(self$tf_session$Psi)) },
-    Beta          = function() { self$tf_session$session$run(self$tf_session$polyak$average(self$tf_session$B_0)) },
-    Lambda        = function() { self$tf_session$session$run(self$tf_session$polyak$average(self$tf_session$Lambda)) },
-    Theta         = function() { self$tf_session$session$run(self$tf_session$polyak$average(self$tf_session$Theta)) },
+    Sigma         = function() { private$run(self$tf_session$polyak$average(self$tf_session$Sigma)) },
+    Psi           = function() { private$run(self$tf_session$polyak$average(self$tf_session$Psi)) },
+    Beta          = function() { private$run(self$tf_session$polyak$average(self$tf_session$B_0)) },
+    Lambda        = function() { private$run(self$tf_session$polyak$average(self$tf_session$Lambda)) },
+    Theta         = function() { private$run(self$tf_session$polyak$average(self$tf_session$Theta)) },
 
     # gradients
-    Psi_grad      = function() { self$tf_session$session$run(self$tf_session$polyak$average(self$tf_session$Psi_g)) },
-    Beta_grad     = function() { self$tf_session$session$run(self$tf_session$polyak$average(self$tf_session$B_0_g)) },
+    Psi_grad      = function() { private$run(self$tf_session$polyak$average(self$tf_session$Psi_g)) },
+    Beta_grad     = function() { private$run(self$tf_session$polyak$average(self$tf_session$B_0_g)) },
     Lambda_grad   = function() {
-      self$tf_session$session$run(self$tf_session$polyak$average(self$tf_session$Lambda_g))
+      private$run(self$tf_session$polyak$average(self$tf_session$Lambda_g))
     },
     Theta_grad    = function() {
-      self$tf_session$session$run(self$tf_session$polyak$average(self$tf_session$Theta_g))
+      private$run(self$tf_session$polyak$average(self$tf_session$Theta_g))
     },
 
     # data & loss
@@ -134,22 +156,22 @@ tf_sem_object <- R6Class(
       dat
     },
     loss          = function() {
-      self$tf_session$session$run(self$tf_session$dat$dat_iter$initializer)
+      private$run(self$tf_session$dat$dat_iter$initializer)
       loss <- 0.0
       tfdatasets::until_out_of_range(
-        loss <- loss + self$tf_session$session$run(self$tf_session$loss)
+        loss <- loss + private$run(self$tf_session$loss)
       )
       loss
     },
     loglik        = function() { (-(self$sample_size - 1) / 2) * (ncol(self$tf_session$dat$n_col) * log(2 * pi) - self$loss) },
 
     # param vec
-    delta         = function() { self$tf_session$session$run(self$tf_session$polyak$average(self$tf_session$dlt_vec)) },
-    delta_idx     = function() { which(self$tf_session$session$run(self$tf_session$dlt_free) == 1) },
-    delta_free    = function() { self$tf_session$session$run(self$tf_session$polyak$average(self$tf_session$dlt_fre)) },
-    delta_grad    = function() { self$tf_session$session$run(self$tf_session$polyak$average(self$tf_session$dlt_g)) },
+    delta         = function() { private$run(self$tf_session$polyak$average(self$tf_session$dlt_vec)) },
+    delta_idx     = function() { which(private$run(self$tf_session$dlt_free) == 1) },
+    delta_free    = function() { private$run(self$tf_session$polyak$average(self$tf_session$dlt_fre)) },
+    delta_grad    = function() { private$run(self$tf_session$polyak$average(self$tf_session$dlt_g)) },
     delta_hess    = function() {
-      self$tf_session$session$run(self$tf_session$polyak$average(self$tf_session$dlt_H[[1]]))
+      private$run(self$tf_session$polyak$average(self$tf_session$dlt_H[[1]]))
     },
     ACOV          = function() {
       # only valid with ml_loss

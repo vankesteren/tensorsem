@@ -9,14 +9,21 @@ tf_pars_to_session <- function(params) {
 
   with(tf_env, {
 
+    # penalties
+    lasso_beta   <- tf$placeholder(dtype = "float32", shape = shape(), name = "lasso_beta")
+    lasso_lambda <- tf$placeholder(dtype = "float32", shape = shape(), name = "lasso_lambda")
+    lasso_psi    <- tf$placeholder(dtype = "float32", shape = shape(), name = "lasso_psi")
+    ridge_beta   <- tf$placeholder(dtype = "float32", shape = shape(), name = "ridge_beta")
+    ridge_lambda <- tf$placeholder(dtype = "float32", shape = shape(), name = "ridge_lambda")
+    ridge_psi    <- tf$placeholder(dtype = "float32", shape = shape(), name = "ridge_psi")
+
+    # initialise dataset for batch processing / SGD
     dat       <- create_tf_data(params$data_mat)
 
     # info
     v_trans   <- params$cov_map$v_trans
     v_itrans  <- params$cov_map$v_itrans
     v_names   <- params$cov_map$v_names
-
-
 
     # Parameter vector
     dlt_init  <- tf$constant(params$delta_start, dtype = "float32", name = "dlt_init")
@@ -80,21 +87,38 @@ tf_pars_to_session <- function(params) {
     I_mat     <- tf$eye(params$mat_size$beta[1], dtype = "float32")
     B         <- I_mat - B_0
     B_inv     <- tf$matrix_inverse(B)
-    Sigma     <- tf$matmul(tf$matmul(Lambda, tf$matmul(tf$matmul(B_inv, Psi), B_inv, transpose_b = TRUE)),
+    Sigma_ful <- tf$matmul(tf$matmul(Lambda, tf$matmul(tf$matmul(B_inv, Psi), B_inv, transpose_b = TRUE)),
                            Lambda, transpose_b = TRUE) + Theta
+    iSigma    <- tf$matrix_inverse(Sigma_ful)
 
     # Data batch
     N         <- tf$constant(dat$b_size, dtype = "float32")
     Z         <- dat$next_batch
     Z_data    <- Z[[1]]$x
-    Z_mask    <- Z[[2]]$x
-    S         <- tf$matmul(Z_data, Z_data, transpose_a = TRUE) / N
+    mask      <- tf$gather(Z[[2]]$x, 0L)
+    Z_full    <- tf$boolean_mask(Z_data, mask, axis = 1L)
+    S         <- tf$matmul(Z_full, Z_full, transpose_a = TRUE) / N
 
-    # Loss function
-    loss      <- (tf$linalg$logdet(Sigma) + tf$linalg$trace(tf$matmul(S, tf$matrix_inverse(Sigma)))) * N / 2
+    # Also mask Sigma for missing data pattern
+    Sigma     <- tf$boolean_mask(tf$boolean_mask(Sigma_ful, mask, axis = 0L), mask, axis = 1L)
+    Sigma_inv <- tf$boolean_mask(tf$boolean_mask(iSigma,    mask, axis = 0L), mask, axis = 1L)
 
-    # abs diff gets really close to original estimates without inversion!
-    # loss      <- tf$reduce_sum(tf$abs(Sigma - S))
+    # penalties
+    penalty <-
+      lasso_beta   * tf$reduce_sum(tf$abs(B_0)) +
+      lasso_lambda * tf$reduce_sum(tf$abs(Lambda)) +
+      lasso_psi    * tf$reduce_sum(tf$abs(Psi)) +
+      ridge_beta   * tf$reduce_sum(tf$square(B_0)) +
+      ridge_lambda * tf$reduce_sum(tf$square(Lambda)) +
+      ridge_psi    * tf$reduce_sum(tf$square(Psi))
+
+    # fit function
+    fit <- switch(params$fit_fun,
+      ml  = (tf$linalg$logdet(Sigma) + tf$linalg$trace(tf$matmul(S, Sigma_inv))) * N / 2,
+      lad = tf$reduce_sum(tf$abs(Sigma - S)) * N
+    )
+
+    loss <- fit + penalty
 
     # gradients
     if (params$mat_size$psi[1] > 1L) {
@@ -119,20 +143,22 @@ tf_pars_to_session <- function(params) {
 
 
     # polyak average _all the things_
-    polyak    <- tf$train$ExponentialMovingAverage(decay = .998, zero_debias = TRUE)
+    polyak    <- tf$train$ExponentialMovingAverage(decay = .99, zero_debias = TRUE)
     polyak_v  <- polyak$apply(tensorflow::tuple(
       B_0, B_0_g,
       Psi, Psi_g,
       Lambda, Lambda_g,
       Theta, Theta_g,
-      Sigma, loss,
+      Sigma_ful, loss,
       dlt_vec, dlt_fre, dlt_g[[1]], dlt_H[[1]]
     ))
 
+    # initialise the optimizer
     with(tf$control_dependencies(tensorflow::tuple(polyak_v)), {
       optim  <- tf$train$AdamOptimizer()
       train  <- optim$minimize(loss)
     })
+    reset_optim_op <- tf$variables_initializer(optim$variables())
 
     # initialise session
     session <- tf$Session()

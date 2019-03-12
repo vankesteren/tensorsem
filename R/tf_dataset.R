@@ -33,13 +33,13 @@ create_tf_data <- function(dat) {
   tf_mask    <- tfdatasets::text_line_dataset(mask_loc, record_spec = spec_mask, parallel_records = n_cores)
   tf_data    <- tfdatasets::text_line_dataset(data_loc, record_spec = spec_data, parallel_records = n_cores)
 
-  tf_mask     <- tfdatasets::dataset_prepare(tf_mask, x = !!spec_mask$names, batch_size = b_size)
-  tf_data     <- tfdatasets::dataset_prepare(tf_data, x = !!spec_data$names, batch_size = b_size)
+  tf_mask    <- tfdatasets::dataset_prepare(tf_mask, x = !!spec_mask$names, batch_size = b_size)
+  tf_data    <- tfdatasets::dataset_prepare(tf_data, x = !!spec_data$names, batch_size = b_size)
 
   tf_both    <- tfdatasets::zip_datasets(tf_data, tf_mask)
 
-  tf_both     <- tfdatasets::dataset_shuffle(tf_both, n_row)
-  tf_both     <- tfdatasets::dataset_prefetch(tf_both, n_row)
+  tf_both    <- tfdatasets::dataset_shuffle(tf_both, n_row)
+  tf_both    <- tfdatasets::dataset_prefetch(tf_both, n_row)
   dat_iter   <- tfdatasets::make_iterator_initializable(tf_both)
   next_batch <- tfdatasets::iterator_get_next(dat_iter)
 

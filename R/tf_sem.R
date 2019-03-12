@@ -72,7 +72,7 @@
 #'   }
 #' }
 #'
-#' @examples
+#' @examplesn
 #' \donttest{
 #'   mod    <- "x1 ~ x2 + x3"
 #'   dat    <- lavaan::HolzingerSwineford1939
