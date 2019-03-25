@@ -13,8 +13,9 @@ dataset_full <- data.frame(X_full)
 
 library(lavaan)
 
-lav <- "X1 ~ X2 + X3"
-mod <- sem(lav, dataset, information = "observed", missing = "fiml")
+mod <- "X1 ~ X2 + X3"
+lav <- sem(mod, dataset, missing = "fiml", fixed.x = FALSE)
 
-tf_mod <- tf_sem(lav, dataset)
-tf_mod$train(1000, verbose = FALSE)
+tf_mod <- tf_sem(mod, dataset)
+tf_mod$set_init(lav)
+tf_mod$train(50, verbose = FALSE)

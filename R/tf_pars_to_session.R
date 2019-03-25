@@ -18,7 +18,8 @@ tf_pars_to_session <- function(params) {
     ridge_psi    <- tf$placeholder(dtype = "float32", shape = shape(), name = "ridge_psi")
 
     # initialise dataset for batch processing / SGD
-    dat       <- create_tf_data(params$data_mat)
+    # dat       <- create_tf_data(params$data_mat)
+    dat <- tf_data$new(params$data_mat)
 
     # info
     v_trans   <- params$cov_map$v_trans
@@ -93,7 +94,7 @@ tf_pars_to_session <- function(params) {
 
     # Data batch
     N         <- tf$constant(dat$b_size, dtype = "float32")
-    Z         <- dat$next_batch
+    Z         <- dat$get_next
     Z_data    <- Z[[1]]$x
     mask      <- tf$gather(Z[[2]]$x, 0L)
     Z_full    <- tf$boolean_mask(Z_data, mask, axis = 1L)
@@ -143,7 +144,7 @@ tf_pars_to_session <- function(params) {
 
 
     # polyak average _all the things_
-    polyak    <- tf$train$ExponentialMovingAverage(decay = .99, zero_debias = TRUE)
+    polyak    <- tf$train$ExponentialMovingAverage(decay = params$polyak_decay, zero_debias = TRUE)
     polyak_v  <- polyak$apply(tensorflow::tuple(
       B_0, B_0_g,
       Psi, Psi_g,

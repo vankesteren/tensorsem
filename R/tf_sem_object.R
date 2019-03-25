@@ -23,6 +23,7 @@ tf_sem_object <- R6Class(
       ridge_psi    = 0.0
     ),
     feed = NULL,
+    polyak_result = FALSE,
     initialize    = function(tf_session, mod, sample_size) {
       self$tf_session  <- tf_session
       self$lav_model   <- mod
@@ -40,11 +41,11 @@ tf_sem_object <- R6Class(
         cat(str_pad("ITER", nchar(niter)), " | ", str_pad("LOSS", nchar(format(round(self$loss, 5)))), " | ",
             "FIRST 10 FREE PARAMETERS\n")
       } else if (pb) {
-        progbar <- progress_bar$new(format = "[loss: :loss] [:bar] :percent", total  = niter)
+        progbar <- progress_bar$new(format = "[loss: :loss] [:bar] :percent", total = niter)
       }
 
       for (iter in 1:niter) {
-        private$run(self$tf_session$dat$dat_iter$initializer)
+        private$run(self$tf_session$dat$iter$initializer)
 
         loss <- 0.0
         tfdatasets::until_out_of_range({
@@ -118,6 +119,12 @@ tf_sem_object <- R6Class(
            col  = "#00008b",
            ...
       )
+    },
+    set_init      = function(lav) {
+      self$Psi    <- lav@Model@GLIST$psi
+      self$Beta   <- lav@Model@GLIST$beta
+      self$Lambda <- lav@Model@GLIST$lambda
+      self$Theta  <- lav@Model@GLIST$theta
     }
   ),
   private = list(
@@ -129,15 +136,69 @@ tf_sem_object <- R6Class(
     },
     run           = function(...) {
       self$tf_session$session$run(..., feed_dict = self$feed)
+    },
+    input_values  = function(val_vec, target) {
+      orig_vec <- private$run(self$tf_session$dlt_vec)
+      vec_size <- private$run(self$tf_session$vec_sizes)
+      inp_idx  <- switch(target,
+        Psi    = 1:vec_size[1],
+        Beta   = (vec_size[1] + 1):sum(vec_size[1:2]),
+        Lambda = (sum(vec_size[1:2]) + 1):sum(vec_size[1:3]),
+        Theta  = (sum(vec_size[1:3]) + 1):sum(vec_size[1:4])
+      )
+      orig_vec[inp_idx] <- val_vec
+      self$tf_session$dlt_vec$load(orig_vec, self$tf_session$session)
     }
   ),
   active = list(
     # matrices
-    Sigma         = function() { private$run(self$tf_session$polyak$average(self$tf_session$Sigma)) },
-    Psi           = function() { private$run(self$tf_session$polyak$average(self$tf_session$Psi)) },
-    Beta          = function() { private$run(self$tf_session$polyak$average(self$tf_session$B_0)) },
-    Lambda        = function() { private$run(self$tf_session$polyak$average(self$tf_session$Lambda)) },
-    Theta         = function() { private$run(self$tf_session$polyak$average(self$tf_session$Theta)) },
+    Sigma         = function() {
+      if (self$polyak_result) {
+        return(private$run(self$tf_session$polyak$average(self$tf_session$Sigma_ful)))
+      } else {
+        return(private$run(self$tf_session$Sigma_ful))
+      }
+    },
+    Psi           = function(Psi_new) {
+      if (self$polyak_result) {
+        Psi <- private$run(self$tf_session$polyak$average(self$tf_session$Psi))
+      } else {
+        Psi <- private$run(self$tf_session$Psi)
+      }
+      if (missing(Psi_new)) return(Psi)
+      if (!identical(dim(Psi_new), dim(Psi))) stop("Input size not equal to tensor size")
+      private$input_values(c(Psi_new[lower.tri(Psi_new, diag = TRUE)]), "Psi")
+    },
+    Beta          = function(Beta_new) {
+      if (self$polyak_result) {
+        Beta <- private$run(self$tf_session$polyak$average(self$tf_session$B_0))
+      } else {
+        Beta <- private$run(self$tf_session$B_0)
+      }
+      if (missing(Beta_new)) return(Beta)
+      if (!identical(dim(Beta_new), dim(Beta))) stop("Input size not equal to tensor size")
+      private$input_values(c(Beta_new), "Beta")
+    },
+    Lambda        = function(Lambda_new) {
+      if (self$polyak_result) {
+        Lambda <- private$run(self$tf_session$polyak$average(self$tf_session$Lambda))
+      } else {
+        Lambda <- private$run(self$tf_session$Lambda)
+      }
+      if (missing(Lambda_new)) return(Lambda)
+      if (!identical(dim(Lambda_new), dim(Lambda))) stop("Input size not equal to tensor size")
+      private$input_values(c(Lambda_new), "Lambda")
+    },
+    Theta         = function(Theta_new) {
+      if (self$polyak_result) {
+        Theta <- private$run(self$tf_session$polyak$average(self$tf_session$Theta))
+      } else {
+        Theta <- private$run(self$tf_session$Theta)
+      }
+      if (missing(Theta_new)) return(Theta)
+      if (!identical(dim(Theta_new), dim(Theta))) stop("Input size not equal to tensor size")
+      private$input_values(c(Theta_new[lower.tri(Theta, diag = TRUE)]), "Theta")
+    },
 
     # gradients
     Psi_grad      = function() { private$run(self$tf_session$polyak$average(self$tf_session$Psi_g)) },
@@ -156,7 +217,7 @@ tf_sem_object <- R6Class(
       dat
     },
     loss          = function() {
-      private$run(self$tf_session$dat$dat_iter$initializer)
+      private$run(self$tf_session$dat$iter$initializer)
       loss <- 0.0
       tfdatasets::until_out_of_range(
         loss <- loss + private$run(self$tf_session$loss)
@@ -166,15 +227,32 @@ tf_sem_object <- R6Class(
     loglik        = function() { (-(self$sample_size - 1) / 2) * (ncol(self$tf_session$dat$n_col) * log(2 * pi) - self$loss) },
 
     # param vec
-    delta         = function() { private$run(self$tf_session$polyak$average(self$tf_session$dlt_vec)) },
+    delta         = function() {
+      if (self$polyak_result) {
+        return(private$run(self$tf_session$polyak$average(self$tf_session$dlt_vec)))
+      } else {
+        return(private$run(self$tf_session$dlt_vec))
+      }
+    },
     delta_idx     = function() { which(private$run(self$tf_session$dlt_free) == 1) },
-    delta_free    = function() { private$run(self$tf_session$polyak$average(self$tf_session$dlt_fre)) },
-    delta_grad    = function() { private$run(self$tf_session$polyak$average(self$tf_session$dlt_g)) },
+    delta_free    = function() {
+      if (self$polyak_result) {
+        return(private$run(self$tf_session$polyak$average(self$tf_session$dlt_fre)))
+      } else {
+        return(private$run(self$tf_session$dlt_vec))
+      }
+    },
+    delta_grad    = function() {
+      # we need to polyak average the gradient always with SGD!
+      private$run(self$tf_session$polyak$average(self$tf_session$dlt_g))
+
+    },
     delta_hess    = function() {
+      # we need to polyak average the hessian always with SGD!
       private$run(self$tf_session$polyak$average(self$tf_session$dlt_H[[1]]))
     },
     ACOV          = function() {
-      # only valid with ml_loss
+      # only valid with ml_loss, uses polyak averaged hessian.
       hes <- self$delta_hess
       idx <- self$delta_idx
       (1 / (self$sample_size - 1)) * solve(hes[idx, idx])

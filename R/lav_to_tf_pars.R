@@ -119,20 +119,21 @@ lav_to_tf_pars <- function(mod, data) {
   if (is.null(mat_siz$beta)) mat_siz$beta <- c(1L, 1L)
 
   return(list(
-    mat_size    = mat_siz,
-    idx         = list(
+    mat_size     = mat_siz,
+    fit_fun      = "ml",
+    delta_start  = delta_start,
+    delta_free   = delta_free,
+    delta_value  = delta_value,
+    data_mat     = scale(as.matrix(sub_dat)[, v_trans], scale = FALSE),
+    miss_mat     = mis_mat[,v_trans],
+    polyak_decay = 0.98,
+    idx          = list(
       psi = psi_idx,
       b_0 = b_0_idx,
       lam = lam_idx,
       tht = tht_idx
     ),
-    fit_fun     = "ml",
-    delta_start = delta_start,
-    delta_free  = delta_free,
-    delta_value = delta_value,
-    data_mat    = scale(as.matrix(sub_dat)[, v_trans], scale = FALSE),
-    miss_mat    = mis_mat[,v_trans],
-    cov_map     = list(
+    cov_map      = list(
       v_trans  = v_trans,
       v_itrans = v_itrans,
       v_names  = v_names
