@@ -15,6 +15,7 @@ tf_data <- R6Class(
     mask_loc   = NULL,
     n_row      = NULL,
     n_col      = NULL,
+    n_obs      = NULL,
     b_size     = 1,
     initialize = function(dat) {
       # Information
@@ -28,6 +29,7 @@ tf_data <- R6Class(
       na_ind   <- which(is.na(dat), arr.ind = TRUE)
       mask_mat <- matrix(1L, self$n_row, self$n_col)
       mask_mat[na_ind] <- 0L
+      self$n_obs <- sum(mask_mat)
 
       # edited dataset with only numeric
       data_mat <- dat

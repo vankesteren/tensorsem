@@ -90,7 +90,6 @@ tf_pars_to_session <- function(params) {
     B_inv     <- tf$matrix_inverse(B)
     Sigma_ful <- tf$matmul(tf$matmul(Lambda, tf$matmul(tf$matmul(B_inv, Psi), B_inv, transpose_b = TRUE)),
                            Lambda, transpose_b = TRUE) + Theta
-    iSigma    <- tf$matrix_inverse(Sigma_ful)
 
     # Data batch
     N         <- tf$constant(dat$b_size, dtype = "float32")
@@ -102,7 +101,7 @@ tf_pars_to_session <- function(params) {
 
     # Also mask Sigma for missing data pattern
     Sigma     <- tf$boolean_mask(tf$boolean_mask(Sigma_ful, mask, axis = 0L), mask, axis = 1L)
-    Sigma_inv <- tf$boolean_mask(tf$boolean_mask(iSigma,    mask, axis = 0L), mask, axis = 1L)
+    Sigma_inv <- tf$matrix_inverse(Sigma)
 
     # penalties
     penalty <-

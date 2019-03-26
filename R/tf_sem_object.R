@@ -224,7 +224,7 @@ tf_sem_object <- R6Class(
       )
       loss
     },
-    loglik        = function() { (-(self$sample_size - 1) / 2) * (ncol(self$tf_session$dat$n_col) * log(2 * pi) - self$loss) },
+    loglik        = function() { -(self$tf_session$dat$n_obs * log(2 * pi) / 2 + self$loss) },
 
     # param vec
     delta         = function() {
@@ -239,7 +239,7 @@ tf_sem_object <- R6Class(
       if (self$polyak_result) {
         return(private$run(self$tf_session$polyak$average(self$tf_session$dlt_fre)))
       } else {
-        return(private$run(self$tf_session$dlt_vec))
+        return(private$run(self$tf_session$dlt_fre))
       }
     },
     delta_grad    = function() {
@@ -256,6 +256,10 @@ tf_sem_object <- R6Class(
       hes <- self$delta_hess
       idx <- self$delta_idx
       (1 / (self$sample_size - 1)) * solve(hes[idx, idx])
+    },
+    adam_variance = function() {
+      vars <- private$run(self$tf_session$optim$get_slot(self$tf_session$dlt_vec))
+      vars[self$delta_idx]
     }
   )
 )
