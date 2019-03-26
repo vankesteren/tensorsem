@@ -258,7 +258,7 @@ tf_sem_object <- R6Class(
       (1 / (self$sample_size - 1)) * solve(hes[idx, idx])
     },
     adam_variance = function() {
-      vars <- private$run(self$tf_session$optim$get_slot(self$tf_session$dlt_vec))
+      vars <- private$run(self$tf_session$optim$get_slot(self$tf_session$dlt_vec, "v"))
       vars[self$delta_idx]
     }
   )
