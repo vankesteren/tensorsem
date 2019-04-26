@@ -15,12 +15,15 @@ tf_sem_object <- R6Class(
     sample_size   = NULL,
     loss_vec      = NULL,
     penalties     = list(
-      lasso_beta   = 0.0,
-      lasso_lambda = 0.0,
-      lasso_psi    = 0.0,
-      ridge_beta   = 0.0,
-      ridge_lambda = 0.0,
-      ridge_psi    = 0.0
+      lasso_beta     = 0.0,
+      lasso_lambda   = 0.0,
+      lasso_psi      = 0.0,
+      ridge_beta     = 0.0,
+      ridge_lambda   = 0.0,
+      ridge_psi      = 0.0,
+      spike_lambda   = 0.0,
+      slab_lambda    = 0.0,
+      mixing_lambda  = 0.0
     ),
     feed          = NULL,
     initialize    = function(tf_session, mod, sample_size) {
