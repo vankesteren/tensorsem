@@ -10,32 +10,32 @@ tf_pars_to_session <- function(params) {
   with(tf_env, {
 
     # penalties
-    lasso_beta     <- tf$placeholder(dtype = "float64", shape = shape(), name = "lasso_beta")
-    lasso_lambda   <- tf$placeholder(dtype = "float64", shape = shape(), name = "lasso_lambda")
-    lasso_psi      <- tf$placeholder(dtype = "float64", shape = shape(), name = "lasso_psi")
-    ridge_beta     <- tf$placeholder(dtype = "float64", shape = shape(), name = "ridge_beta")
-    ridge_lambda   <- tf$placeholder(dtype = "float64", shape = shape(), name = "ridge_lambda")
-    ridge_psi      <- tf$placeholder(dtype = "float64", shape = shape(), name = "ridge_psi")
+    lasso_beta     <- tf$placeholder(dtype = "float32", shape = shape(), name = "lasso_beta")
+    lasso_lambda   <- tf$placeholder(dtype = "float32", shape = shape(), name = "lasso_lambda")
+    lasso_psi      <- tf$placeholder(dtype = "float32", shape = shape(), name = "lasso_psi")
+    ridge_beta     <- tf$placeholder(dtype = "float32", shape = shape(), name = "ridge_beta")
+    ridge_lambda   <- tf$placeholder(dtype = "float32", shape = shape(), name = "ridge_lambda")
+    ridge_psi      <- tf$placeholder(dtype = "float32", shape = shape(), name = "ridge_psi")
 
     # spike-slab params
-    spike_lambda  <- tf$placeholder(dtype = "float64", shape = shape(), name = "spike_lambda")
-    slab_lambda   <- tf$placeholder(dtype = "float64", shape = shape(), name = "slab_lambda")
-    mixing_lambda <- tf$placeholder(dtype = "float64", shape = shape(), name = "mixing_lambda")
+    spike_lambda  <- tf$placeholder(dtype = "float32", shape = shape(), name = "spike_lambda")
+    slab_lambda   <- tf$placeholder(dtype = "float32", shape = shape(), name = "slab_lambda")
+    mixing_lambda <- tf$placeholder(dtype = "float32", shape = shape(), name = "mixing_lambda")
 
     # info
     v_trans   <- params$cov_map$v_trans
     v_itrans  <- params$cov_map$v_itrans
     v_names   <- params$cov_map$v_names
-    S         <- tf$constant(params$S_data[v_trans, v_trans], dtype = "float64")
+    S         <- tf$constant(params$S_data[v_trans, v_trans], dtype = "float32")
 
     # Parameter vector
-    dlt_init  <- tf$constant(params$delta_start, dtype = "float64")
-    dlt_free  <- tf$constant(params$delta_free,  dtype = "float64")
-    dlt_value <- tf$constant(params$delta_value, dtype = "float64")
+    dlt_init  <- tf$constant(params$delta_start, dtype = "float32")
+    dlt_free  <- tf$constant(params$delta_free,  dtype = "float32")
+    dlt_value <- tf$constant(params$delta_value, dtype = "float32")
     dlt_vec   <- tf$Variable(initial_value =          dlt_init * dlt_free + dlt_value,
-                             constraint    = function(dlt) dlt * dlt_free + dlt_value, dtype = "float64")
+                             constraint    = function(dlt) dlt * dlt_free + dlt_value, dtype = "float32")
 
-    vec_sizes <- tf$constant(vapply(params$idx, length, 1L), dtype = "int64")
+    vec_sizes <- tf$constant(vapply(params$idx, length, 1L), dtype = "int32")
     dlt_split <- tf$split(dlt_vec, vec_sizes)
 
     psi_vec <- dlt_split[[1]]
@@ -51,7 +51,7 @@ tf_pars_to_session <- function(params) {
 
     # Psi matrix
     if (params$mat_size$psi[1] > 1L) {
-      psi_dup <- tf$constant(matrixcalc::duplication.matrix(params$mat_size$psi[1]), dtype = "float64")
+      psi_dup <- tf$constant(matrixcalc::duplication.matrix(params$mat_size$psi[1]), dtype = "float32")
       psi_cc  <- tf$matmul(psi_dup, tf$expand_dims(psi_vec, 1L))
       Psi     <- tf$reshape(psi_cc, shape(params$mat_size$psi[1], params$mat_size$psi[2]))
     } else {
@@ -63,7 +63,7 @@ tf_pars_to_session <- function(params) {
       B_0     <- tf$reshape(b_0_vec, shape(params$mat_size$beta[1], params$mat_size$beta[2]))
     } else {
       b_0_com <- tf$constant(matrixcalc::commutation.matrix(params$mat_size$beta[1], params$mat_size$beta[2]),
-                             dtype = "float64")
+                             dtype = "float32")
       B_0     <- tf$reshape(tf$matmul(b_0_com, tf$expand_dims(b_0_vec, 1L)),
                             shape(params$mat_size$beta[1], params$mat_size$beta[2]))
     }
@@ -73,20 +73,20 @@ tf_pars_to_session <- function(params) {
       Lambda  <- tf$reshape(lam_vec, shape(params$mat_size$lambda[1], params$mat_size$lambda[2]))
     } else {
       lam_com <- tf$constant(matrixcalc::commutation.matrix(params$mat_size$lambda[1], params$mat_size$lambda[2]),
-                             dtype = "float64")
+                             dtype = "float32")
       Lambda  <- tf$reshape(tf$matmul(lam_com, tf$expand_dims(lam_vec, 1L)),
                             shape(params$mat_size$lambda[1], params$mat_size$lambda[2]))
     }
 
     # Theta matrix
-    tht_dup   <- tf$constant(matrixcalc::duplication.matrix(params$mat_size$theta[1]), dtype = "float64")
+    tht_dup   <- tf$constant(matrixcalc::duplication.matrix(params$mat_size$theta[1]), dtype = "float32")
     tht_cc    <- tf$matmul(tht_dup, tf$expand_dims(tht_vec, 1L))
 
     Theta     <- tf$reshape(tht_cc, shape(params$mat_size$theta[1],
                                           params$mat_size$theta[2]))
 
     # loss function
-    I_mat     <- tf$eye(params$mat_size$beta[1], dtype = "float64")
+    I_mat     <- tf$eye(params$mat_size$beta[1], dtype = "float32")
     B         <- I_mat - B_0
     B_inv     <- tf$matrix_inverse(B)
     Sigma     <- tf$matmul(tf$matmul(Lambda, tf$matmul(tf$matmul(B_inv, Psi), B_inv, transpose_b = TRUE)),
@@ -94,7 +94,7 @@ tf_pars_to_session <- function(params) {
     Sigma_inv <- tf$matrix_inverse(Sigma)
 
     # penalties
-    one <- tf$constant(1.0, dtype = "float64")
+    one <- tf$constant(1.0, dtype = "float32")
     penalty <-
       lasso_beta   * tf$reduce_sum(tf$abs(B_0)) +
       lasso_lambda * tf$reduce_sum(tf$abs(Lambda)) +
