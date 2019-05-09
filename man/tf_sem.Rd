@@ -11,6 +11,8 @@ tf_sem(lav_model, data, fit_fun = "ml", fit = FALSE)
 
 \item{data}{A data frame. Only numeric variables supported.}
 
+\item{fit_fun}{Basic fit function: "ml" for log-likelihood, "lad" for least absolute deviation}
+
 \item{fit}{(optional) train the model for 2000 iterations upon creation}
 }
 \value{

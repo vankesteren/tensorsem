@@ -1,5 +1,7 @@
 language: r
-cache: packages
+cache: 
+  - packages
+  - $HOME/.cache/pip
 latex: false
 before_install:
   - R -e 'install.packages("devtools")'
