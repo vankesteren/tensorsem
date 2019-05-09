@@ -3,7 +3,7 @@
   <br/>
   <span>
     <a href="https://CRAN.R-project.org/package=tensorsem"><img src="http://www.r-pkg.org/badges/version/tensorsem"></img></a>
-    <a href="https://travis-ci.org/vankesteren/tensorsem"><img src="https://travis-ci.org/vankesteren/tensorsem.svg?branch=master"></img></a>
+    <a href="https://travis-ci.org/vankesteren/tensorsem"><img src="https://travis-ci.org/vankesteren/tensorsem.svg?branch=computationgraph"></img></a>
   </span>
   <h3 align="center">Computation graph branch</h3>
   <h5 align="center">Structural Equation Modeling using TensorFlow</h5>
