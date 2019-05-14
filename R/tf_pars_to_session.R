@@ -10,12 +10,17 @@ tf_pars_to_session <- function(params) {
   with(tf_env, {
 
     # penalties
-    lasso_beta   <- tf$placeholder(dtype = "float32", shape = shape(), name = "lasso_beta")
-    lasso_lambda <- tf$placeholder(dtype = "float32", shape = shape(), name = "lasso_lambda")
-    lasso_psi    <- tf$placeholder(dtype = "float32", shape = shape(), name = "lasso_psi")
-    ridge_beta   <- tf$placeholder(dtype = "float32", shape = shape(), name = "ridge_beta")
-    ridge_lambda <- tf$placeholder(dtype = "float32", shape = shape(), name = "ridge_lambda")
-    ridge_psi    <- tf$placeholder(dtype = "float32", shape = shape(), name = "ridge_psi")
+    lasso_beta     <- tf$placeholder(dtype = "float32", shape = shape(), name = "lasso_beta")
+    lasso_lambda   <- tf$placeholder(dtype = "float32", shape = shape(), name = "lasso_lambda")
+    lasso_psi      <- tf$placeholder(dtype = "float32", shape = shape(), name = "lasso_psi")
+    ridge_beta     <- tf$placeholder(dtype = "float32", shape = shape(), name = "ridge_beta")
+    ridge_lambda   <- tf$placeholder(dtype = "float32", shape = shape(), name = "ridge_lambda")
+    ridge_psi      <- tf$placeholder(dtype = "float32", shape = shape(), name = "ridge_psi")
+
+    # spike-slab params
+    spike_lambda  <- tf$placeholder(dtype = "float32", shape = shape(), name = "spike_lambda")
+    slab_lambda   <- tf$placeholder(dtype = "float32", shape = shape(), name = "slab_lambda")
+    mixing_lambda <- tf$placeholder(dtype = "float32", shape = shape(), name = "mixing_lambda")
 
     # initialise dataset for batch processing / SGD
     # dat       <- create_tf_data(params$data_mat)
@@ -25,13 +30,14 @@ tf_pars_to_session <- function(params) {
     v_trans   <- params$cov_map$v_trans
     v_itrans  <- params$cov_map$v_itrans
     v_names   <- params$cov_map$v_names
-
+    
     # Parameter vector
     dlt_init  <- tf$constant(params$delta_start, dtype = "float32", name = "dlt_init")
     dlt_free  <- tf$constant(params$delta_free,  dtype = "float32", name = "dlt_free")
     dlt_value <- tf$constant(params$delta_value, dtype = "float32", name = "dlt_value")
     dlt_vec   <- tf$Variable(initial_value =          dlt_init * dlt_free + dlt_value,
-                             constraint    = function(dlt) dlt * dlt_free + dlt_value, dtype = "float32",
+                             constraint    = function(dlt) dlt * dlt_free + dlt_value, 
+                             dtype         = "float32",
                              name          = "dlt_vec")
 
     vec_sizes <- tf$constant(vapply(params$idx, length, 1L), dtype = "int64", name = "vec_sizes")
@@ -104,20 +110,24 @@ tf_pars_to_session <- function(params) {
     Sigma_inv <- tf$matrix_inverse(Sigma)
 
     # penalties
+    one <- tf$constant(1.0, dtype = "float32")
+    
     penalty <-
       lasso_beta   * tf$reduce_sum(tf$abs(B_0)) +
       lasso_lambda * tf$reduce_sum(tf$abs(Lambda)) +
       lasso_psi    * tf$reduce_sum(tf$abs(Psi)) +
       ridge_beta   * tf$reduce_sum(tf$square(B_0)) +
       ridge_lambda * tf$reduce_sum(tf$square(Lambda)) +
-      ridge_psi    * tf$reduce_sum(tf$square(Psi))
+      ridge_psi    * tf$reduce_sum(tf$square(Psi)) +
+      mixing_lambda         * spike_lambda * tf$reduce_sum(tf$abs(Lambda)) +
+      (one - mixing_lambda) * slab_lambda  * tf$reduce_sum(tf$square(Lambda))
 
     # fit function
     fit <- switch(params$fit_fun,
       ml  = (tf$linalg$logdet(Sigma) + tf$linalg$trace(tf$matmul(S, Sigma_inv))) * N / 2,
       lad = tf$reduce_sum(tf$abs(Sigma - S)) * N
     )
-
+    
     loss <- fit + penalty
 
     # gradients

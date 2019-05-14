@@ -44,6 +44,7 @@ lav_to_tf_pars <- function(mod, data) {
 
   # get starting values / set values
   S_data   <- cov(sub_dat, use = "pairwise") * (nrow(sub_dat) - 1) / nrow(sub_dat)
+
   s_stats  <- getFromNamespace("lav_samplestats_from_data", "lavaan")(
     lavdata       =  getFromNamespace("lavData", "lavaan")(data = data, lavoptions = lo),
     missing       = lo$missing,
@@ -68,7 +69,6 @@ lav_to_tf_pars <- function(mod, data) {
     zero.keep.margins = lo$zero.keep.margins,
     zero.cell.warn    = lo$zero.cell.warn
   )
-
   pt$start <- getFromNamespace("lav_start", "lavaan")(lavpartable = pt, lavsamplestats = s_stats, model.type = "sem")
 
   lav_mod  <- getFromNamespace("lav_model", "lavaan")(lavpartable = pt, lavoptions  = lo)
@@ -76,7 +76,7 @@ lav_to_tf_pars <- function(mod, data) {
   # create vectors
   psi_vec <- matrixcalc::vech(lav_mod@GLIST$psi)
   if (is.null(lav_mod@GLIST$beta)) {
-    b_0_vec <- 0
+    b_0_vec <- rep(0, prod(dim(lav_mod@GLIST$psi)))
   } else {
     b_0_vec <- matrixcalc::vec(lav_mod@GLIST$beta)
   }
@@ -95,7 +95,7 @@ lav_to_tf_pars <- function(mod, data) {
 
   psi_free <- matrixcalc::vech(glist_free$psi)
   if (is.null(glist_free$beta)) {
-    b_0_free <- 0
+    b_0_free <- rep(0, prod(dim(lav_mod@GLIST$psi)))
   } else {
     b_0_free <- matrixcalc::vec(glist_free$beta)
   }
@@ -116,7 +116,7 @@ lav_to_tf_pars <- function(mod, data) {
 
   # matrix sizes
   mat_siz <- lapply(lav_mod@GLIST, dim)
-  if (is.null(mat_siz$beta)) mat_siz$beta <- c(1L, 1L)
+  if (is.null(mat_siz$beta)) mat_siz$beta <- mat_siz$psi
 
   return(list(
     mat_size     = mat_siz,
