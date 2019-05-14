@@ -38,7 +38,7 @@ tf_sem_object <- R6Class(
     # Methods
     train         = function(niter = 10000, pb = TRUE, verbose = FALSE) {
       private$update_feed()
-      
+
       loss_vec <- numeric(niter)
 
       if (verbose) {
@@ -152,17 +152,6 @@ tf_sem_object <- R6Class(
       )
       orig_vec[inp_idx] <- val_vec
       self$tf_session$dlt_vec$load(orig_vec, self$tf_session$session)
-    }
-  ),
-  private = list(
-    update_feed   = function() {
-      # create hyperparameter feed
-      feed_list        <- self$penalties
-      names(feed_list) <- sapply(names(self$penalties), function(n) self$tf_session[[n]]$name)
-      self$feed        <- tensorflow::dict(feed_list)
-    },
-    run           = function(...) {
-      self$tf_session$session$run(..., feed_dict = self$feed)
     }
   ),
   active = list(
