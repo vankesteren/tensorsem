@@ -14,6 +14,10 @@ tf_sem(lav_model, data, fit_fun = "ml", fit = FALSE)
 \item{fit_fun}{Basic fit function: "ml" for log-likelihood, "lad" for least absolute deviation}
 
 \item{fit}{(optional) train the model for 2000 iterations upon creation}
+
+\item{loss}{expression}
+
+\item{...}{any hyperparameters used in the loss function}
 }
 \value{
 a tf_sem object. See below.
@@ -86,10 +90,12 @@ See below the available methods and extractable information from the resulting o
 }
 
 \examples{
-mod    <- "x1 ~ x2 + x3"
-dat    <- lavaan::HolzingerSwineford1939
-tf_mod <- tf_sem(mod, dat)
-tf_mod$train(2000)
-tf_mod$summary()
+\donttest{
+  mod    <- "x1 ~ x2 + x3"
+  dat    <- lavaan::HolzingerSwineford1939
+  tf_mod <- tf_sem(mod, dat)
+  tf_mod$train(50)
+  tf_mod$summary()
+}
 
 }

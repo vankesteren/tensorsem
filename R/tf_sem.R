@@ -7,6 +7,8 @@
 #' @param data A data frame. Only numeric variables supported.
 #' @param fit_fun Basic fit function: "ml" for log-likelihood, "lad" for least absolute deviation
 #' @param fit (optional) train the model for 2000 iterations upon creation
+#' @param loss expression
+#' @param ... any hyperparameters used in the loss function
 #'
 #' @details The tf_sem function supports only a subset of the lavaan syntax as of now:
 #' \itemize{
@@ -71,12 +73,14 @@
 #'   }
 #' }
 #'
-#' @examples
-#' mod    <- "x1 ~ x2 + x3"
-#' dat    <- lavaan::HolzingerSwineford1939
-#' tf_mod <- tf_sem(mod, dat)
-#' tf_mod$train(2000)
-#' tf_mod$summary()
+#' @examplesn
+#' \donttest{
+#'   mod    <- "x1 ~ x2 + x3"
+#'   dat    <- lavaan::HolzingerSwineford1939
+#'   tf_mod <- tf_sem(mod, dat)
+#'   tf_mod$train(50)
+#'   tf_mod$summary()
+#' }
 #'
 #' @export
 tf_sem <- function(lav_model, data, fit_fun = "ml", fit = FALSE) {
