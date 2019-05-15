@@ -7,8 +7,6 @@
 #' @param data A data frame. Only numeric variables supported.
 #' @param fit_fun Basic fit function: "ml" for log-likelihood, "lad" for least absolute deviation
 #' @param fit (optional) train the model for 2000 iterations upon creation
-#' @param loss expression
-#' @param ... any hyperparameters used in the loss function
 #'
 #' @details The tf_sem function supports only a subset of the lavaan syntax as of now:
 #' \itemize{

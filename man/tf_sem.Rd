@@ -14,10 +14,6 @@ tf_sem(lav_model, data, fit_fun = "ml", fit = FALSE)
 \item{fit_fun}{Basic fit function: "ml" for log-likelihood, "lad" for least absolute deviation}
 
 \item{fit}{(optional) train the model for 2000 iterations upon creation}
-
-\item{loss}{expression}
-
-\item{...}{any hyperparameters used in the loss function}
 }
 \value{
 a tf_sem object. See below.

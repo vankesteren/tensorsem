@@ -40,6 +40,7 @@ tf_sem_object <- R6Class(
       private$update_feed()
 
       loss_vec <- numeric(niter)
+      loss_obs <- numeric(niter * self$sample_size)
 
       if (verbose) {
         cat(str_pad("ITER", nchar(niter)), " | ", str_pad("LOSS", nchar(format(round(self$loss, 5)))), " | ",
@@ -228,7 +229,7 @@ tf_sem_object <- R6Class(
       )
       loss
     },
-    loglik        = function() { -(self$tf_session$dat$n_obs * log(2 * pi) / 2 + self$loss) },
+    loglik        = function() { -(self$sample_size * log(2 * pi) / 2 + self$loss) },
 
     # param vec
     delta         = function() {
