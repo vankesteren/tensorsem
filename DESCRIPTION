@@ -23,4 +23,5 @@ remotes:
     rstudio/tensorflow,
     rstudio/tfdatasets
 Suggests: 
-    testthat
+    testthat,
+    MASS
