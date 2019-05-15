@@ -34,6 +34,10 @@ tf_sem_object <- R6Class(
       private$update_feed()
       self$loss_vec    <- self$loss
     },
+    finalize      = function() {
+      # close tensorflow session when object is garbage collected
+      self$tf_session$session$close()
+    },
 
     # Methods
     train         = function(niter = 10000, pb = TRUE, verbose = FALSE) {
@@ -127,7 +131,9 @@ tf_sem_object <- R6Class(
     },
     set_init      = function(lav) {
       self$Psi    <- lav@Model@GLIST$psi
-      self$Beta   <- lav@Model@GLIST$beta
+      if (!is.null(lav@Model@GLIST$beta)) {
+        self$Beta   <- lav@Model@GLIST$beta
+      }
       self$Lambda <- lav@Model@GLIST$lambda
       self$Theta  <- lav@Model@GLIST$theta
     }

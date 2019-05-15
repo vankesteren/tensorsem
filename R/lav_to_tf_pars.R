@@ -10,7 +10,23 @@
 #' @keywords internal
 lav_to_tf_pars <- function(mod, data) {
   # create lavaan model
-  pt <- lavaan::lavaanify(mod, model.type = "sem", auto = TRUE, fixed.x = FALSE)
+  pt <- lavaan::lavaanify(
+    mod,
+    model.type      = "sem",
+    auto            = TRUE,
+    int.ov.free     = TRUE,
+    int.lv.free     = FALSE,
+    auto.fix.first  = FALSE,
+    auto.fix.single = TRUE,
+    auto.var        = TRUE,
+    auto.cov.lv.x   = TRUE,
+    auto.cov.y      = TRUE,
+    auto.th         = TRUE,
+    auto.delta      = TRUE,
+    conditional.x   = TRUE,
+    fixed.x         = FALSE,
+    std.lv          = TRUE
+  )
 
   # lav options corresponding to sem()
   lo <- lavaan::lavOptions()
@@ -74,14 +90,14 @@ lav_to_tf_pars <- function(mod, data) {
   lav_mod  <- getFromNamespace("lav_model", "lavaan")(lavpartable = pt, lavoptions  = lo)
 
   # create vectors
-  psi_vec <- matrixcalc::vech(lav_mod@GLIST$psi)
+  psi_vec <- lavaan::lav_matrix_vech(lav_mod@GLIST$psi)
   if (is.null(lav_mod@GLIST$beta)) {
     b_0_vec <- rep(0, prod(dim(lav_mod@GLIST$psi)))
   } else {
-    b_0_vec <- matrixcalc::vec(lav_mod@GLIST$beta)
+    b_0_vec <- lavaan::lav_matrix_vec(lav_mod@GLIST$beta)
   }
-  lam_vec <- matrixcalc::vec(lav_mod@GLIST$lambda)
-  tht_vec <- matrixcalc::vech(lav_mod@GLIST$theta)
+  lam_vec <- lavaan::lav_matrix_vec(lav_mod@GLIST$lambda)
+  tht_vec <- lavaan::lav_matrix_vech(lav_mod@GLIST$theta)
 
   # 1 - 0 free param matrices
   glist_free <- list()
@@ -93,14 +109,14 @@ lav_to_tf_pars <- function(mod, data) {
     glist_free[[names(lav_mod@GLIST)[[mm]]]] <- mat
   }
 
-  psi_free <- matrixcalc::vech(glist_free$psi)
+  psi_free <- lavaan::lav_matrix_vech(glist_free$psi)
   if (is.null(glist_free$beta)) {
     b_0_free <- rep(0, prod(dim(lav_mod@GLIST$psi)))
   } else {
-    b_0_free <- matrixcalc::vec(glist_free$beta)
+    b_0_free <- lavaan::lav_matrix_vec(glist_free$beta)
   }
-  lam_free <- matrixcalc::vec(glist_free$lambda)
-  tht_free <- matrixcalc::vech(glist_free$theta)
+  lam_free <- lavaan::lav_matrix_vec(glist_free$lambda)
+  tht_free <- lavaan::lav_matrix_vech(glist_free$theta)
 
 
   # actual params
@@ -157,8 +173,8 @@ tf_pars_to_glist <- function(tf_pars, type = "start") {
     lam_vec <- delta[tf_pars$idx$lam]
     tht_vec <- delta[tf_pars$idx$tht]
 
-    psi_dup <- matrixcalc::duplication.matrix(mat_size$psi[1])
-    tht_dup <- matrixcalc::duplication.matrix(mat_size$theta[1])
+    psi_dup <- lavaan::lav_matrix_duplication(mat_size$psi[1])
+    tht_dup <- lavaan::lav_matrix_duplication(mat_size$theta[1])
 
     list(
       psi    = matrix(c(psi_dup %*% psi_vec), mat_size$psi[1], mat_size$psi[2]),

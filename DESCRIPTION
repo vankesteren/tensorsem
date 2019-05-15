@@ -16,7 +16,6 @@ Imports:
     R6,
     progress,
     stringr,
-    matrixcalc,
     methods,
     tfdatasets,
     rlang

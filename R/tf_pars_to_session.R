@@ -30,13 +30,13 @@ tf_pars_to_session <- function(params) {
     v_trans   <- params$cov_map$v_trans
     v_itrans  <- params$cov_map$v_itrans
     v_names   <- params$cov_map$v_names
-    
+
     # Parameter vector
     dlt_init  <- tf$constant(params$delta_start, dtype = "float32", name = "dlt_init")
     dlt_free  <- tf$constant(params$delta_free,  dtype = "float32", name = "dlt_free")
     dlt_value <- tf$constant(params$delta_value, dtype = "float32", name = "dlt_value")
     dlt_vec   <- tf$Variable(initial_value =          dlt_init * dlt_free + dlt_value,
-                             constraint    = function(dlt) dlt * dlt_free + dlt_value, 
+                             constraint    = function(dlt) dlt * dlt_free + dlt_value,
                              dtype         = "float32",
                              name          = "dlt_vec")
 
@@ -56,7 +56,7 @@ tf_pars_to_session <- function(params) {
 
     # Psi matrix
     if (params$mat_size$psi[1] > 1L) {
-      psi_dup <- tf$constant(matrixcalc::duplication.matrix(params$mat_size$psi[1]), dtype = "float32")
+      psi_dup <- tf$constant(lavaan::lav_matrix_duplication(params$mat_size$psi[1]), dtype = "float32")
       psi_cc  <- tf$matmul(psi_dup, tf$expand_dims(psi_vec, 1L))
       Psi     <- tf$reshape(psi_cc, shape(params$mat_size$psi[1], params$mat_size$psi[2]), name = "Psi")
     } else {
@@ -67,7 +67,7 @@ tf_pars_to_session <- function(params) {
     if (params$mat_size$beta[1] < 2) {
       B_0     <- tf$reshape(b_0_vec, shape(params$mat_size$beta[1], params$mat_size$beta[2]), name = "B_0")
     } else {
-      b_0_com <- tf$constant(matrixcalc::commutation.matrix(params$mat_size$beta[1], params$mat_size$beta[2]),
+      b_0_com <- tf$constant(lavaan::lav_matrix_commutation(params$mat_size$beta[1], params$mat_size$beta[2]),
                              dtype = "float32")
       B_0     <- tf$reshape(tf$matmul(b_0_com, tf$expand_dims(b_0_vec, 1L)),
                             shape(params$mat_size$beta[1], params$mat_size$beta[2]), name = "B_0")
@@ -77,14 +77,14 @@ tf_pars_to_session <- function(params) {
     if (params$mat_size$lambda[2] < 2) {
       Lambda  <- tf$reshape(lam_vec, shape(params$mat_size$lambda[1], params$mat_size$lambda[2]), name = "Lambda")
     } else {
-      lam_com <- tf$constant(matrixcalc::commutation.matrix(params$mat_size$lambda[1], params$mat_size$lambda[2]),
+      lam_com <- tf$constant(lavaan::lav_matrix_commutation(params$mat_size$lambda[1], params$mat_size$lambda[2]),
                              dtype = "float32")
       Lambda  <- tf$reshape(tf$matmul(lam_com, tf$expand_dims(lam_vec, 1L)),
                             shape(params$mat_size$lambda[1], params$mat_size$lambda[2]), name = "Lambda")
     }
 
     # Theta matrix
-    tht_dup   <- tf$constant(matrixcalc::duplication.matrix(params$mat_size$theta[1]), dtype = "float32")
+    tht_dup   <- tf$constant(lavaan::lav_matrix_duplication(params$mat_size$theta[1]), dtype = "float32")
     tht_cc    <- tf$matmul(tht_dup, tf$expand_dims(tht_vec, 1L))
 
     Theta     <- tf$reshape(tht_cc, shape(params$mat_size$theta[1],
@@ -111,7 +111,7 @@ tf_pars_to_session <- function(params) {
 
     # penalties
     one <- tf$constant(1.0, dtype = "float32")
-    
+
     penalty <-
       lasso_beta   * tf$reduce_sum(tf$abs(B_0)) +
       lasso_lambda * tf$reduce_sum(tf$abs(Lambda)) +
@@ -127,7 +127,7 @@ tf_pars_to_session <- function(params) {
       ml  = (tf$linalg$logdet(Sigma) + tf$linalg$trace(tf$matmul(S, Sigma_inv))) * N / 2,
       lad = tf$reduce_sum(tf$abs(Sigma - S)) * N
     )
-    
+
     loss <- fit + penalty
 
     # gradients
