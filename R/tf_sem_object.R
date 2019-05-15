@@ -14,6 +14,7 @@ tf_sem_object <- R6Class(
     lav_model     = NULL,
     sample_size   = NULL,
     loss_vec      = NULL,
+    loss_vec_sgd  = NULL,
     penalties     = list(
       lasso_beta     = 0.0,
       lasso_lambda   = 0.0,
@@ -43,28 +44,41 @@ tf_sem_object <- R6Class(
     train         = function(niter = 10000, pb = TRUE, verbose = FALSE) {
       private$update_feed()
 
-      loss_vec <- numeric(niter)
-      loss_obs <- numeric(niter * self$sample_size)
+      loss_vec     <- numeric(niter)
+      loss_vec_sgd <- numeric(niter * self$sample_size)
 
       if (verbose) {
         cat(str_pad("ITER", nchar(niter)), " | ", str_pad("LOSS", nchar(format(round(self$loss, 5)))), " | ",
             "FIRST 10 FREE PARAMETERS\n")
       } else if (pb) {
-        progbar <- progress_bar$new(format = "[loss: :loss] [:bar] :percent", total = niter)
+        progbar <- progress_bar$new(format = "[:spin] [epoch: :epoch] [loss: :loss] [:bar] :percent", total = niter * self$sample_size)
       }
 
       for (iter in 1:niter) {
+
+        on.exit({
+          self$loss_vec <- c(self$loss_vec, loss_vec[1:iter])
+          self$loss_vec_sgd <- c(self$loss_vec_sgd, loss_vec_sgd[1:(self$sample_size * (iter - 1) + n)])
+        })
+
         private$run(self$tf_session$dat$iter$initializer)
 
         loss <- 0.0
+        n    <- 1L
         tfdatasets::until_out_of_range({
           result <- private$run(list(self$tf_session$loss, self$tf_session$train))
           loss   <- loss + result[[1]]
+          loss_vec_sgd[self$sample_size * (iter - 1) + n] <- result[[1]]
+          n <- n + 1L
+          if (pb && !verbose) {
+            progbar$tick(tokens = list(
+              epoch = iter,
+              loss = format(round(ifelse(iter > 1, loss_vec[iter - 1], 0), 5), nsmall = 5))
+            )
+          }
         })
 
         loss_vec[iter] <- loss
-
-        if (pb && !verbose) progbar$tick(tokens = list(loss = format(round(loss_vec[iter], 5), nsmall = 5)))
 
         if (verbose && iter %% ceiling(niter / 100) == 0) {
           freeparams <- self$delta_free
@@ -76,7 +90,7 @@ tf_sem_object <- R6Class(
         }
       }
 
-      self$loss_vec <- c(self$loss_vec, loss_vec)
+      # self$loss_vec <- c(self$loss_vec, loss_vec)
 
       return(invisible(self))
     },
@@ -116,13 +130,20 @@ tf_sem_object <- R6Class(
 
       return(invisible(self))
     },
-    plot_loss     = function(...) {
-      if (length(self$loss_vec) < 2) stop("Too few iterations to plot loss.")
-      plot(x    = 1:length(self$loss_vec),
-           y    = self$loss_vec,
+    plot_loss     = function(.type = "Epoch", ...) {
+      if (.type == "Epoch") {
+        y <- self$loss_vec
+      } else if (.type == "SGD") {
+        y <- self$loss_vec_sgd
+      } else if (.type == "Moving") {
+        y <- diff(cumsum(na.omit(self$loss_vec_sgd)), lag = self$sample_size)
+      }
+      if (length(y) < 2) stop("Too few iterations to plot loss.")
+      plot(x    = 1:length(y),
+           y    = y,
            xlab = "Iterations",
            ylab = "Loss",
-           main = "Loss plot",
+           main = paste(.type, "loss plot"),
            bty  = "L",
            type = "l",
            col  = "#00008b",

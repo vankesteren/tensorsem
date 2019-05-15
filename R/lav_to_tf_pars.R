@@ -23,7 +23,7 @@ lav_to_tf_pars <- function(mod, data) {
     auto.cov.y      = TRUE,
     auto.th         = TRUE,
     auto.delta      = TRUE,
-    conditional.x   = TRUE,
+    conditional.x   = FALSE,
     fixed.x         = FALSE,
     std.lv          = TRUE
   )
@@ -33,7 +33,7 @@ lav_to_tf_pars <- function(mod, data) {
   lo$missing         <- "fiml"
   lo$int.ov.free     <- TRUE
   lo$int.lv.free     <- FALSE
-  lo$auto.fix.first  <- FALSE
+  lo$auto.fix.first  <- TRUE
   lo$auto.fix.single <- TRUE
   lo$auto.var        <- TRUE
   lo$auto.cov.lv.x   <- TRUE

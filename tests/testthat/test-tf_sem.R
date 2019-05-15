@@ -1,6 +1,6 @@
 context("test-tf_sem")
 
-tf_mod <- tf_sem("x1 ~ x2 + x3", lavaan::HolzingerSwineford1939[7:12], verbose = 1)
+tf_mod <- tf_sem("x1 ~ x2 + x3", lavaan::HolzingerSwineford1939[7:12])
 
 test_that("model is created", {
   expect_equal(class(tf_mod), c("tf_sem", "R6"))
