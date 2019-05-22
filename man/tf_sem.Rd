@@ -4,12 +4,14 @@
 \alias{tf_sem}
 \title{Perform structural equation modeling with TensorFlow}
 \usage{
-tf_sem(lav_model, data, fit = FALSE)
+tf_sem(lav_model, data, fit_fun = "ml", fit = FALSE)
 }
 \arguments{
 \item{lav_model}{A lavaan syntax model. See details for restrictions.}
 
 \item{data}{A data frame. Only numeric variables supported.}
+
+\item{fit_fun}{Basic fit function: "ml" for log-likelihood, "lad" for least absolute deviation}
 
 \item{fit}{(optional) train the model for 2000 iterations upon creation}
 }

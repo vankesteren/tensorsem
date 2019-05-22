@@ -1,9 +1,12 @@
 language: r
-cache: packages
+cache: 
+  - packages
+  - $HOME/.cache/pip
 latex: false
 before_install:
+  - R -e 'install.packages("devtools")'
   - R -e 'devtools::install_github("rstudio/tensorflow")'
-  - R -e 'tensorflow::install_tensorflow()'
+  - R -e 'tensorflow::install_tensorflow(version = "1.13.1")'
 matrix:
   include:
     - os: linux

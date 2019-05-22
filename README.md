@@ -3,18 +3,27 @@
   <br/>
   <span>
     <a href="https://CRAN.R-project.org/package=tensorsem"><img src="http://www.r-pkg.org/badges/version/tensorsem"></img></a>
-    <a href="https://travis-ci.org/vankesteren/tensorsem"><img src="https://travis-ci.com/vankesteren/tensorsem.svg?token=sWy8hKyU5pssaiyciVfB&branch=master"></img></a>
+    <a href="https://travis-ci.org/vankesteren/tensorsem"><img src="https://travis-ci.org/vankesteren/tensorsem.svg?branch=computationgraph"></img></a>
   </span>
+  <h3 align="center">Computation graph branch</h3>
   <h5 align="center">Structural Equation Modeling using TensorFlow</h5>
 </p>
 <br/>
 
 ## Description
-An `R` package for structural equation modeling using TensorFlow
+An `R` package for structural equation modeling using TensorFlow. This is a stable branch.
 
 ## Installation
-1. Install tensorflow for R by following the instructions on the [RStudio website](https://tensorflow.rstudio.com/tensorflow/)
-2. Install the tensorsem package from this repository as follows:
 ```r
-devtools::install_github("vankesteren/tensorsem")
+# First, install TensorFlow version 1.13.1 for R
+# Newer versions _may_ work but are untested.
+remotes::install_github("rstudio/tensorflow")
+tensorflow::install_tensorflow(version = "1.13.1")
+
+# Then, install tensorsem from this branch
+remotes::install_github("vankesteren/tensorsem@computationgraph")
+
+# Lastly, load and run the example
+library(tensorsem)
+example(tf_sem)
 ```

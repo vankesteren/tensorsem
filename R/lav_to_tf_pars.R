@@ -10,13 +10,29 @@
 #' @keywords internal
 lav_to_tf_pars <- function(mod, data) {
   # create lavaan model
-  pt <- lavaan::lavaanify(mod, model.type = "sem", auto = TRUE)
+  pt <- lavaan::lavaanify(
+    mod,
+    model.type      = "sem",
+    auto            = TRUE,
+    int.ov.free     = TRUE,
+    int.lv.free     = FALSE,
+    auto.fix.first  = FALSE,
+    auto.fix.single = TRUE,
+    auto.var        = TRUE,
+    auto.cov.lv.x   = TRUE,
+    auto.cov.y      = TRUE,
+    auto.th         = TRUE,
+    auto.delta      = TRUE,
+    conditional.x   = FALSE,
+    fixed.x         = FALSE,
+    std.lv          = TRUE
+  )
 
   # lav options corresponding to sem()
   lo <- lavaan::lavOptions()
   lo$int.ov.free     <- TRUE
   lo$int.lv.free     <- FALSE
-  lo$auto.fix.first  <- FALSE
+  lo$auto.fix.first  <- TRUE
   lo$auto.fix.single <- TRUE
   lo$auto.var        <- TRUE
   lo$auto.cov.lv.x   <- TRUE
@@ -33,31 +49,33 @@ lav_to_tf_pars <- function(mod, data) {
   v_names  <- lav_mod@dimNames[[2]][[1]]
 
   sub_dat  <- data[, colnames(data) %in% v_names]
+  mis_idx  <- which(is.na(sub_dat))
+  mis_mat  <- matrix(1, nrow(sub_dat), ncol(sub_dat))
+  mis_mat[mis_idx] <- 0
 
   # trans stuff
   v_itrans  <- vapply(colnames(sub_dat), function(var) which(var == lav_mod@dimNames[[2]][[1]]), 1L)
   v_trans   <- vapply(lav_mod@dimNames[[2]][[1]], function(var) which(var == colnames(sub_dat)), 1L)
 
-  S_data   <- cov(sub_dat) * (nrow(sub_dat) - 1) / nrow(sub_dat)
+  # get starting values / set values
+  S_data   <- cov(sub_dat, use = "pairwise") * (nrow(sub_dat) - 1) / nrow(sub_dat)
   s_stats  <- new("lavSampleStats",
                   cov = list(S_data[v_trans, v_trans]),
                   mean = list(colMeans(sub_dat)[v_trans]),
                   missing.flag = FALSE)
-
-  # get starting values / set values
   pt$start <- getFromNamespace("lav_start", "lavaan")(lavpartable = pt, lavsamplestats = s_stats, model.type = "sem")
 
   lav_mod  <- getFromNamespace("lav_model", "lavaan")(lavpartable = pt, lavoptions  = lo)
 
   # create vectors
-  psi_vec <- matrixcalc::vech(lav_mod@GLIST$psi)
+  psi_vec <- lavaan::lav_matrix_vech(lav_mod@GLIST$psi)
   if (is.null(lav_mod@GLIST$beta)) {
-    b_0_vec <- 0
+    b_0_vec <- rep(0, prod(dim(lav_mod@GLIST$psi)))
   } else {
-    b_0_vec <- matrixcalc::vec(lav_mod@GLIST$beta)
+    b_0_vec <- lavaan::lav_matrix_vec(lav_mod@GLIST$beta)
   }
-  lam_vec <- matrixcalc::vec(lav_mod@GLIST$lambda)
-  tht_vec <- matrixcalc::vech(lav_mod@GLIST$theta)
+  lam_vec <- lavaan::lav_matrix_vec(lav_mod@GLIST$lambda)
+  tht_vec <- lavaan::lav_matrix_vech(lav_mod@GLIST$theta)
 
   # 1 - 0 free param matrices
   glist_free <- list()
@@ -69,14 +87,14 @@ lav_to_tf_pars <- function(mod, data) {
     glist_free[[names(lav_mod@GLIST)[[mm]]]] <- mat
   }
 
-  psi_free <- matrixcalc::vech(glist_free$psi)
+  psi_free <- lavaan::lav_matrix_vech(glist_free$psi)
   if (is.null(glist_free$beta)) {
-    b_0_free <- 0
+    b_0_free <- rep(0, prod(dim(lav_mod@GLIST$psi)))
   } else {
-    b_0_free <- matrixcalc::vec(glist_free$beta)
+    b_0_free <- lavaan::lav_matrix_vec(glist_free$beta)
   }
-  lam_free <- matrixcalc::vec(glist_free$lambda)
-  tht_free <- matrixcalc::vech(glist_free$theta)
+  lam_free <- lavaan::lav_matrix_vec(glist_free$lambda)
+  tht_free <- lavaan::lav_matrix_vech(glist_free$theta)
 
 
   # actual params
@@ -92,7 +110,7 @@ lav_to_tf_pars <- function(mod, data) {
 
   # matrix sizes
   mat_siz <- lapply(lav_mod@GLIST, dim)
-  if (is.null(mat_siz$beta)) mat_siz$beta <- c(1L, 1L)
+  if (is.null(mat_siz$beta)) mat_siz$beta <- mat_siz$psi
 
   return(list(
     mat_size    = mat_siz,
@@ -105,6 +123,8 @@ lav_to_tf_pars <- function(mod, data) {
     delta_start = delta_start,
     delta_free  = delta_free,
     delta_value = delta_value,
+    data_mat    = scale(as.matrix(sub_dat)[, v_trans], scale = FALSE),
+    miss_mat    = mis_mat[,v_trans],
     S_data      = S_data,
     cov_map     = list(
       v_trans  = v_trans,
@@ -130,8 +150,8 @@ tf_pars_to_glist <- function(tf_pars, type = "start") {
     lam_vec <- delta[tf_pars$idx$lam]
     tht_vec <- delta[tf_pars$idx$tht]
 
-    psi_dup <- matrixcalc::duplication.matrix(mat_size$psi[1])
-    tht_dup <- matrixcalc::duplication.matrix(mat_size$theta[1])
+    psi_dup <- lavaan::lav_matrix_duplication(mat_size$psi[1])
+    tht_dup <- lavaan::lav_matrix_duplication(mat_size$theta[1])
 
     list(
       psi    = matrix(c(psi_dup %*% psi_vec), mat_size$psi[1], mat_size$psi[2]),
