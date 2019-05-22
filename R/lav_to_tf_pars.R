@@ -30,7 +30,7 @@ lav_to_tf_pars <- function(mod, data) {
 
   # lav options corresponding to sem()
   lo <- lavaan::lavOptions()
-  lo$missing         <- "fiml"
+  lo$missing         <- "ml"
   lo$int.ov.free     <- TRUE
   lo$int.lv.free     <- FALSE
   lo$auto.fix.first  <- TRUE
@@ -59,8 +59,7 @@ lav_to_tf_pars <- function(mod, data) {
   v_trans   <- vapply(lav_mod@dimNames[[2]][[1]], function(var) which(var == colnames(sub_dat)), 1L)
 
   # get starting values / set values
-  S_data   <- cov(sub_dat, use = "pairwise") * (nrow(sub_dat) - 1) / nrow(sub_dat)
-
+  # S_data   <- cov(sub_dat, use = "pairwise") * (nrow(sub_dat) - 1) / nrow(sub_dat)
   s_stats  <- getFromNamespace("lav_samplestats_from_data", "lavaan")(
     lavdata       =  getFromNamespace("lavData", "lavaan")(data = data, lavoptions = lo),
     missing       = lo$missing,

@@ -233,18 +233,40 @@ tf_sem_object <- R6Class(
     },
 
     # gradients
-    Psi_grad      = function() { private$run(self$tf_session$polyak$average(self$tf_session$Psi_g)) },
-    Beta_grad     = function() { private$run(self$tf_session$polyak$average(self$tf_session$B_0_g)) },
+    Psi_grad      = function() {
+      if (self$polyak_result) {
+        private$run(self$tf_session$polyak$average(self$tf_session$Psi_g))
+      } else {
+        private$run(self$tf_session$Psi_g)
+      }
+    },
+    Beta_grad     = function() {
+      if (self$polyak_result) {
+        private$run(self$tf_session$polyak$average(self$tf_session$B_0_g))
+      } else {
+        private$run(self$tf_session$B_0_g)
+      }
+    },
     Lambda_grad   = function() {
-      private$run(self$tf_session$polyak$average(self$tf_session$Lambda_g))
+      if (self$polyak_result) {
+        private$run(self$tf_session$polyak$average(self$tf_session$Lambda_g))
+      } else {
+        private$run(self$tf_session$Lambda_g)
+      }
     },
     Theta_grad    = function() {
-      private$run(self$tf_session$polyak$average(self$tf_session$Theta_g))
+      if (self$polyak_result) {
+        private$run(self$tf_session$polyak$average(self$tf_session$Theta_g))
+      } else {
+        private$run(self$tf_session$Theta_g)
+      }
     },
 
     # data & loss
     data          = function() {
-      dat <- self$tf_session$dat$dat_mat
+      dat <- utils::read.csv(self$tf_session$dat$data_loc)
+      msk <- utils::read.csv(self$tf_session$dat$mask_loc)
+      dat[msk == 0] <- NA
       colnames(dat) <- self$tf_session$v_names[self$tf_session$v_trans]
       dat
     },
@@ -256,7 +278,21 @@ tf_sem_object <- R6Class(
       )
       loss
     },
-    loglik        = function() { -(self$sample_size * log(2 * pi) / 2 + self$loss) },
+    fit_value     = function() {
+      private$run(self$tf_session$dat$iter$initializer)
+      fit_value <- 0.0
+      tfdatasets::until_out_of_range(
+        fit_value <- fit_value + private$run(self$tf_session$fit)
+      )
+      fit_value
+    },
+    loglik        = function() {
+      lavaan:::lav_mvnorm_missing_llik_casewise(
+        Y = self$data,
+        wt = NULL,
+        Mu = rep(0, self$tf_session$dat$n_col),
+        Sigma = self$Sigma)
+    },
 
     # param vec
     delta         = function() {
@@ -276,7 +312,7 @@ tf_sem_object <- R6Class(
     },
     delta_grad    = function() {
       # we need to polyak average the gradient always with SGD!
-      private$run(self$tf_session$polyak$average(self$tf_session$dlt_g))
+      private$run(self$tf_session$polyak$average(self$tf_session$dlt_g[[1]]))
 
     },
     delta_hess    = function() {

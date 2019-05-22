@@ -171,7 +171,17 @@ tf_pars_to_session <- function(params) {
     reset_optim_op <- tf$variables_initializer(optim$variables())
 
     # initialise session
-    session <- tf$Session()
+    # create configuration protobuf turning off memory optimization
+    # https://github.com/tensorflow/tensorflow/issues/23780
+    config_pb <- reticulate::py_run_string("
+import tensorflow as tf
+from tensorflow.core.protobuf import rewriter_config_pb2
+session_config = tf.ConfigProto()
+off = rewriter_config_pb2.RewriterConfig.OFF
+#session_config.graph_options.rewrite_options.arithmetic_optimization = off
+session_config.graph_options.rewrite_options.memory_optimization = off
+    ")$session_config
+    session <- tf$Session(config = config_pb)
     session$run(tf$global_variables_initializer())
   })
 
