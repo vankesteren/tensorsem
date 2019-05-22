@@ -51,7 +51,7 @@ tf_pars_to_session <- function(params) {
 
     # Psi matrix
     if (params$mat_size$psi[1] > 1L) {
-      psi_dup <- tf$constant(matrixcalc::duplication.matrix(params$mat_size$psi[1]), dtype = "float32")
+      psi_dup <- tf$constant(lavaan::lav_matrix_duplication(params$mat_size$psi[1]), dtype = "float32")
       psi_cc  <- tf$matmul(psi_dup, tf$expand_dims(psi_vec, 1L))
       Psi     <- tf$reshape(psi_cc, shape(params$mat_size$psi[1], params$mat_size$psi[2]))
     } else {
@@ -62,7 +62,7 @@ tf_pars_to_session <- function(params) {
     if (params$mat_size$beta[1] < 2) {
       B_0     <- tf$reshape(b_0_vec, shape(params$mat_size$beta[1], params$mat_size$beta[2]))
     } else {
-      b_0_com <- tf$constant(matrixcalc::commutation.matrix(params$mat_size$beta[1], params$mat_size$beta[2]),
+      b_0_com <- tf$constant(lavaan::lav_matrix_commutation(params$mat_size$beta[1], params$mat_size$beta[2]),
                              dtype = "float32")
       B_0     <- tf$reshape(tf$matmul(b_0_com, tf$expand_dims(b_0_vec, 1L)),
                             shape(params$mat_size$beta[1], params$mat_size$beta[2]))
@@ -72,14 +72,14 @@ tf_pars_to_session <- function(params) {
     if (params$mat_size$lambda[2] < 2) {
       Lambda  <- tf$reshape(lam_vec, shape(params$mat_size$lambda[1], params$mat_size$lambda[2]))
     } else {
-      lam_com <- tf$constant(matrixcalc::commutation.matrix(params$mat_size$lambda[1], params$mat_size$lambda[2]),
+      lam_com <- tf$constant(lavaan::lav_matrix_commutation(params$mat_size$lambda[1], params$mat_size$lambda[2]),
                              dtype = "float32")
       Lambda  <- tf$reshape(tf$matmul(lam_com, tf$expand_dims(lam_vec, 1L)),
                             shape(params$mat_size$lambda[1], params$mat_size$lambda[2]))
     }
 
     # Theta matrix
-    tht_dup   <- tf$constant(matrixcalc::duplication.matrix(params$mat_size$theta[1]), dtype = "float32")
+    tht_dup   <- tf$constant(lavaan::lav_matrix_duplication(params$mat_size$theta[1]), dtype = "float32")
     tht_cc    <- tf$matmul(tht_dup, tf$expand_dims(tht_vec, 1L))
 
     Theta     <- tf$reshape(tht_cc, shape(params$mat_size$theta[1],
@@ -143,7 +143,17 @@ tf_pars_to_session <- function(params) {
     optim <- tf$train$AdamOptimizer()
     train <- optim$minimize(loss)
 
-    session <- tf$Session()
+    # create configuration protobuf turning off memory optimization
+    # https://github.com/tensorflow/tensorflow/issues/23780
+    config_pb <- reticulate::py_run_string("
+import tensorflow as tf
+from tensorflow.core.protobuf import rewriter_config_pb2
+session_config = tf.ConfigProto()
+off = rewriter_config_pb2.RewriterConfig.OFF
+#session_config.graph_options.rewrite_options.arithmetic_optimization = off
+session_config.graph_options.rewrite_options.memory_optimization = off
+    ")$session_config
+    session <- tf$Session(config = config_pb)
     session$run(tf$global_variables_initializer())
 
   })
