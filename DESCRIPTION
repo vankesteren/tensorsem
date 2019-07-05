@@ -12,6 +12,7 @@ LazyData: true
 RoxygenNote: 6.1.1
 Imports: 
     tensorflow,
+    reticulate,
     lavaan,
     R6,
     progress,
