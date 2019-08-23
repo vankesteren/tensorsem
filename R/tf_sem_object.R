@@ -155,7 +155,7 @@ tf_sem_object <- R6Class(
     delta         = function() { private$run(self$tf_session$dlt_vec) },
     delta_idx     = function() { which(private$run(self$tf_session$dlt_free) == 1) },
     delta_free    = function() { private$run(self$tf_session$dlt_fre) },
-    delta_grad    = function() { private$run(self$tf_session$dlt_g) },
+    delta_grad    = function() { private$run(self$tf_session$dlt_g)[[1]] },
     delta_hess    = function() { private$run(self$tf_session$dlt_H)[[1]] },
     ACOV          = function() {
       idx <- self$delta_idx
