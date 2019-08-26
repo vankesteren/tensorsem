@@ -16,6 +16,7 @@ Imports:
     R6,
     progress,
     stringr,
-    methods
+    methods,
+    reticulate
 Suggests: 
     testthat
