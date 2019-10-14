@@ -10,7 +10,7 @@
 <br/>
 
 ## Description
-An `R` package for structural equation modeling using TensorFlow. This is a stable branch.
+An `R` package for structural equation modeling using TensorFlow.
 
 ## Installation
 ```r
