@@ -4,7 +4,7 @@ tf_mod <- tf_sem("x1 ~ x2 + x3", lavaan::HolzingerSwineford1939)
 
 test_that("model is created", {
   expect_equal(class(tf_mod), c("tf_sem", "R6"))
-  expect_equal(class(tf_mod$ACOV), "matrix")
+  expect_true("matrix" %in% class(tf_mod$ACOV))
 })
 
 test_that("training works", {
