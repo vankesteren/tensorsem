@@ -72,11 +72,13 @@
 #' }
 #'
 #' @examples
-#' mod    <- "x1 ~ x2 + x3"
-#' dat    <- lavaan::HolzingerSwineford1939
-#' tf_mod <- tf_sem(mod, dat)
-#' tf_mod$train(2000)
-#' tf_mod$summary()
+#' \donttest{
+#'   mod    <- "x1 ~ x2 + x3"
+#'   dat    <- lavaan::HolzingerSwineford1939
+#'   tf_mod <- tf_sem(mod, dat)
+#'   tf_mod$train(50)
+#'   tf_mod$summary()
+#' }
 #'
 #' @export
 tf_sem <- function(lav_model, data, fit_fun = "ml", fit = FALSE) {

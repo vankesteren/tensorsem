@@ -30,6 +30,7 @@ lav_to_tf_pars <- function(mod, data) {
 
   # lav options corresponding to sem()
   lo <- lavaan::lavOptions()
+  lo$missing         <- "ml"
   lo$int.ov.free     <- TRUE
   lo$int.lv.free     <- FALSE
   lo$auto.fix.first  <- TRUE
@@ -58,11 +59,31 @@ lav_to_tf_pars <- function(mod, data) {
   v_trans   <- vapply(lav_mod@dimNames[[2]][[1]], function(var) which(var == colnames(sub_dat)), 1L)
 
   # get starting values / set values
-  S_data   <- cov(sub_dat, use = "pairwise") * (nrow(sub_dat) - 1) / nrow(sub_dat)
-  s_stats  <- new("lavSampleStats",
-                  cov = list(S_data[v_trans, v_trans]),
-                  mean = list(colMeans(sub_dat)[v_trans]),
-                  missing.flag = FALSE)
+  # S_data   <- cov(sub_dat, use = "pairwise") * (nrow(sub_dat) - 1) / nrow(sub_dat)
+  s_stats  <- getFromNamespace("lav_samplestats_from_data", "lavaan")(
+    lavdata       =  getFromNamespace("lavData", "lavaan")(data = data, lavoptions = lo),
+    missing       = lo$missing,
+    rescale       =
+      (lo$estimator %in% c("ML","REML","NTRLS") &&
+         lo$likelihood == "normal"),
+    estimator     = lo$estimator,
+    mimic         = lo$mimic,
+    meanstructure = TRUE,
+    conditional.x = lo$conditional.x,
+    fixed.x       = lo$fixed.x,
+    group.w.free  = lo$group.w.free,
+    missing.h1    = (lo$missing != "listwise"),
+    WLS.V             = NULL,
+    NACOV             = NULL,
+    gamma.n.minus.one = lo$gamma.n.minus.one,
+    se                = lo$se,
+    information       = lo$information,
+    ridge             = lo$ridge,
+    optim.method      = lo$optim.method.cor,
+    zero.add          = lo$zero.add,
+    zero.keep.margins = lo$zero.keep.margins,
+    zero.cell.warn    = lo$zero.cell.warn
+  )
   pt$start <- getFromNamespace("lav_start", "lavaan")(lavpartable = pt, lavsamplestats = s_stats, model.type = "sem")
 
   lav_mod  <- getFromNamespace("lav_model", "lavaan")(lavpartable = pt, lavoptions  = lo)
@@ -113,20 +134,21 @@ lav_to_tf_pars <- function(mod, data) {
   if (is.null(mat_siz$beta)) mat_siz$beta <- mat_siz$psi
 
   return(list(
-    mat_size    = mat_siz,
-    idx         = list(
+    mat_size     = mat_siz,
+    fit_fun      = "ml",
+    delta_start  = delta_start,
+    delta_free   = delta_free,
+    delta_value  = delta_value,
+    data_mat     = scale(as.matrix(sub_dat)[, v_trans], scale = FALSE),
+    miss_mat     = mis_mat[,v_trans],
+    polyak_decay = 0.98,
+    idx          = list(
       psi = psi_idx,
       b_0 = b_0_idx,
       lam = lam_idx,
       tht = tht_idx
     ),
-    delta_start = delta_start,
-    delta_free  = delta_free,
-    delta_value = delta_value,
-    data_mat    = scale(as.matrix(sub_dat)[, v_trans], scale = FALSE),
-    miss_mat    = mis_mat[,v_trans],
-    S_data      = S_data,
-    cov_map     = list(
+    cov_map      = list(
       v_trans  = v_trans,
       v_itrans = v_itrans,
       v_names  = v_names
