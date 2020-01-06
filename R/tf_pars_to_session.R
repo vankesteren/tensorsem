@@ -8,19 +8,21 @@ tf_pars_to_session <- function(params) {
   tf_env <- new.env()
 
   with(tf_env, {
+    tf1 <- tf$compat$v1
+    tf$python$framework_ops$disable_eager_execution()
 
     # penalties
-    lasso_beta     <- tf$placeholder(dtype = "float32", shape = shape(), name = "lasso_beta")
-    lasso_lambda   <- tf$placeholder(dtype = "float32", shape = shape(), name = "lasso_lambda")
-    lasso_psi      <- tf$placeholder(dtype = "float32", shape = shape(), name = "lasso_psi")
-    ridge_beta     <- tf$placeholder(dtype = "float32", shape = shape(), name = "ridge_beta")
-    ridge_lambda   <- tf$placeholder(dtype = "float32", shape = shape(), name = "ridge_lambda")
-    ridge_psi      <- tf$placeholder(dtype = "float32", shape = shape(), name = "ridge_psi")
+    lasso_beta     <- tf1$placeholder(dtype = "float32", shape = shape(), name = "lasso_beta")
+    lasso_lambda   <- tf1$placeholder(dtype = "float32", shape = shape(), name = "lasso_lambda")
+    lasso_psi      <- tf1$placeholder(dtype = "float32", shape = shape(), name = "lasso_psi")
+    ridge_beta     <- tf1$placeholder(dtype = "float32", shape = shape(), name = "ridge_beta")
+    ridge_lambda   <- tf1$placeholder(dtype = "float32", shape = shape(), name = "ridge_lambda")
+    ridge_psi      <- tf1$placeholder(dtype = "float32", shape = shape(), name = "ridge_psi")
 
     # spike-slab params
-    spike_lambda  <- tf$placeholder(dtype = "float32", shape = shape(), name = "spike_lambda")
-    slab_lambda   <- tf$placeholder(dtype = "float32", shape = shape(), name = "slab_lambda")
-    mixing_lambda <- tf$placeholder(dtype = "float32", shape = shape(), name = "mixing_lambda")
+    spike_lambda  <- tf1$placeholder(dtype = "float32", shape = shape(), name = "spike_lambda")
+    slab_lambda   <- tf1$placeholder(dtype = "float32", shape = shape(), name = "slab_lambda")
+    mixing_lambda <- tf1$placeholder(dtype = "float32", shape = shape(), name = "mixing_lambda")
 
     # info
     v_trans   <- params$cov_map$v_trans
@@ -88,10 +90,10 @@ tf_pars_to_session <- function(params) {
     # loss function
     I_mat     <- tf$eye(params$mat_size$beta[1], dtype = "float32")
     B         <- I_mat - B_0
-    B_inv     <- tf$matrix_inverse(B)
+    B_inv     <- tf$linalg$inv(B)
     Sigma     <- tf$matmul(tf$matmul(Lambda, tf$matmul(tf$matmul(B_inv, Psi), B_inv, transpose_b = TRUE)),
                            Lambda, transpose_b = TRUE) + Theta
-    Sigma_inv <- tf$matrix_inverse(Sigma)
+    Sigma_inv <- tf$linalg$inv(Sigma)
 
     # penalties
     one <- tf$constant(1.0, dtype = "float32")
@@ -140,7 +142,7 @@ tf_pars_to_session <- function(params) {
 
 
     # optim
-    optim <- tf$train$AdamOptimizer()
+    optim <- tf1$train$AdamOptimizer()
     train <- optim$minimize(loss)
 
     # create configuration protobuf turning off memory optimization
@@ -148,13 +150,13 @@ tf_pars_to_session <- function(params) {
     config_pb <- reticulate::py_run_string("
 import tensorflow as tf
 from tensorflow.core.protobuf import rewriter_config_pb2
-session_config = tf.ConfigProto()
+session_config = tf.compat.v1.ConfigProto()
 off = rewriter_config_pb2.RewriterConfig.OFF
 #session_config.graph_options.rewrite_options.arithmetic_optimization = off
 session_config.graph_options.rewrite_options.memory_optimization = off
     ")$session_config
-    session <- tf$Session(config = config_pb)
-    session$run(tf$global_variables_initializer())
+    session <- tf1$Session()#config = config_pb)
+    session$run(tf1$global_variables_initializer())
 
   })
 
