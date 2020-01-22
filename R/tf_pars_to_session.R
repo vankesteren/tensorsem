@@ -142,7 +142,7 @@ tf_pars_to_session <- function(params) {
 
 
     # optim
-    optim <- tf1$train$AdamOptimizer(learning_rate = 0.1)
+    optim <- tf1$train$AdamOptimizer(learning_rate = params$learning_rate)
     train <- optim$minimize(loss)
 
     # create configuration protobuf turning off memory optimization

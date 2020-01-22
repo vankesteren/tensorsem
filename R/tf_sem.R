@@ -6,7 +6,8 @@
 #' @param lav_model A lavaan syntax model. See details for restrictions.
 #' @param data A data frame. Only numeric variables supported.
 #' @param fit_fun Basic fit function: "ml" for log-likelihood, "lad" for least absolute deviation
-#' @param fit (optional) train the model for 2000 iterations upon creation
+#' @param fit (optional) train the model for 500 iterations upon creation
+#' @param learning_rate (optional) learning rate for the Adam optimizer
 #'
 #' @details The tf_sem function supports only a subset of the lavaan syntax as of now:
 #' \itemize{
@@ -79,14 +80,15 @@
 #' tf_mod$summary()
 #'
 #' @export
-tf_sem <- function(lav_model, data, fit_fun = "ml", fit = FALSE) {
+tf_sem <- function(lav_model, data, fit_fun = "ml", fit = FALSE, learning_rate = 0.1) {
 
-  tf_params         <- lav_to_tf_pars(lav_model, data)
-  tf_params$fit_fun <- fit_fun
-  tf_session        <- tf_pars_to_session(tf_params)
-  tf_sem_object     <- tf_sem_object$new(tf_session, lav_model, nrow(data))
+  tf_params               <- lav_to_tf_pars(lav_model, data)
+  tf_params$fit_fun       <- fit_fun
+  tf_params$learning_rate <- learning_rate
+  tf_session              <- tf_pars_to_session(tf_params)
+  tf_sem_object           <- tf_sem_object$new(tf_session, lav_model, nrow(data))
 
-  if (fit) tf_sem_object$train(2000)
+  if (fit) tf_sem_object$train(500)
 
   return(tf_sem_object)
 }

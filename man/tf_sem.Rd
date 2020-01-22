@@ -4,7 +4,7 @@
 \alias{tf_sem}
 \title{Perform structural equation modeling with TensorFlow}
 \usage{
-tf_sem(lav_model, data, fit_fun = "ml", fit = FALSE)
+tf_sem(lav_model, data, fit_fun = "ml", fit = FALSE, learning_rate = 0.1)
 }
 \arguments{
 \item{lav_model}{A lavaan syntax model. See details for restrictions.}
@@ -13,7 +13,9 @@ tf_sem(lav_model, data, fit_fun = "ml", fit = FALSE)
 
 \item{fit_fun}{Basic fit function: "ml" for log-likelihood, "lad" for least absolute deviation}
 
-\item{fit}{(optional) train the model for 2000 iterations upon creation}
+\item{fit}{(optional) train the model for 500 iterations upon creation}
+
+\item{learning_rate}{(optional) learning rate for the adam optimizer}
 }
 \value{
 a tf_sem object. See below.
