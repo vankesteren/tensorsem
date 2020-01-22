@@ -14,10 +14,10 @@ An `R` package for structural equation modeling using TensorFlow.
 
 ## Installation
 ```r
-# First, install TensorFlow version 1.13.1 for R
+# First, install TensorFlow version 2 for R
 # Newer versions _may_ work but are untested.
 remotes::install_github("rstudio/tensorflow")
-tensorflow::install_tensorflow(version = "1.13.1")
+tensorflow::install_tensorflow(version = "2.1.0")
 
 # Then, install tensorsem from this branch
 remotes::install_github("vankesteren/tensorsem")
