@@ -6,7 +6,7 @@ latex: false
 before_install:
   - R -e 'install.packages("devtools")'
   - R -e 'devtools::install_github("rstudio/tensorflow")'
-  - R -e 'tensorflow::install_tensorflow(version = "2.1.0")'
+  - R -e 'tensorflow::install_tensorflow(version = "2.1.0")' > tf_install_log.txt
 matrix:
   include:
     - os: linux
