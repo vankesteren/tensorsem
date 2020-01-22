@@ -35,7 +35,7 @@ tf_sem_object <- R6Class(
     },
 
     # Methods
-    train         = function(niter = 10000, pb = TRUE, verbose = FALSE) {
+    train         = function(niter = 200, pb = TRUE, verbose = FALSE) {
       private$update_feed()
 
       loss_vec <- numeric(niter)

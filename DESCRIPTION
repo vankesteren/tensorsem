@@ -1,7 +1,7 @@
 Package: tensorsem
 Type: Package
 Title: Structural Equation Models using TensorFlow
-Version: 0.1.1
+Version: 0.1.2
 Author: Erik-Jan van Kesteren
 Maintainer: Erik-Jan van Kesteren <e.vankesteren1@uu.nl>
 Description: Perform Structural Equation Modeling using a TensorFlow
