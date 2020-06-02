@@ -1,5 +1,20 @@
 ^LICENSE\.md$
+^README\.md$
+^\.travis.yml$
+
+# dirs
+^img$
+^bin$
+^tensorsem$
+^tensorsem\.egg-info$
+^example$
+
+# python files
+^\.idea/.*$
+^__pycache__$
+^setup.py$
+^venv$
+
+# R files
 ^.*\.Rproj$
 ^\.Rproj\.user$
-^img.*$
-^\.travis\.yml$
