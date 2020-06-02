@@ -5,6 +5,7 @@ import pandas as pd
 from tensorsem import *
 import matplotlib.pyplot as plt
 from pathlib import Path
+import sys
 
 ### DESCRIPTION ###
 # We will run the famous holzinger-swineford model from lavaan:
@@ -122,10 +123,13 @@ for epoch in range(MAXIT):
             break  # stop if no loss change
 
 plt.plot(dwls_loss_values)
-plt.show()
+plt.close()
 
 # Inspecting the parameters
 dwls_model.Lam  # Factor loadings matrix
 dwls_model.Psi  # Factor covariance matrix
 dwls_model.B_0  # Structural parameter matrix
 dwls_model.Tht  # Residual covariance matrix
+
+# exit this script
+sys.exit(0)
