@@ -2,7 +2,6 @@
   <img src="img/tensorsem.png" width="300px"></img>
   <br/>
   <span>
-    <a href="https://CRAN.R-project.org/package=tensorsem"><img src="http://www.r-pkg.org/badges/version/tensorsem"></img></a>
     <a href="https://travis-ci.org/vankesteren/tensorsem"><img src="https://travis-ci.org/vankesteren/tensorsem.svg?branch=master"></img></a>
   </span>
   <h5 align="center">Structural Equation Modeling using TensorFlow</h5>
@@ -10,19 +9,27 @@
 <br/>
 
 ## Description
-An `R` package for structural equation modeling using TensorFlow.
+An `R` and `python` package for structural equation modeling using `Torch`. This package is meant for researchers who know their way around SEM, python, and lavaan.
 
 ## Installation
-```r
-# First, install TensorFlow version 2 for R
-# Newer versions _may_ work but are untested.
-remotes::install_github("rstudio/tensorflow")
-tensorflow::install_tensorflow(version = "2.1.0")
+To install the latest version of `tensorsem`, run the following:
 
-# Then, install tensorsem from this branch
-remotes::install_github("vankesteren/tensorsem")
+1. Install the `R` interface package from this repository:
+    ```r
+    remotes::install_github("vankesteren/tensorsem")
+    ```
+2. Install `pytorch` on your system. Use the [`pytorch` website](https://pytorch.org/get-started/locally/) to do this. For example, for a windows pip cpu version, use:
+    ```shell script
+    pip install torch==1.5.0+cpu torchvision==0.6.0+cpu -f https://download.pytorch.org/whl/torch_stable.html
+    ```
+3. Install the `tensorsem` `python` package from this repository.
+    ```shell script
+    pip install https://github.com/vankesteren/tensorsem/archive/master.zip
+    ```
+4. (Optional) Install `pandas` and `matplotlib` for plotting and parameter storing
+    ```shell script
+    pip install matplotlib pandas
+    ```
 
-# Lastly, load and run the example
-library(tensorsem)
-example(tf_sem)
-```
+## Usage
+See the [example](example) directory for a full usage example, estimating the Holzinger-Swineford model using maximum likelihood, unweighted least squares, and diagonally weighted least squares.

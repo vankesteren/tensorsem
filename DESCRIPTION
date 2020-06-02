@@ -1,22 +1,15 @@
 Package: tensorsem
 Type: Package
-Title: Structural Equation Models using TensorFlow
-Version: 0.1.2
+Title: Estimate structural equation models using computation graphs
+Version: 1.0.0
 Author: Erik-Jan van Kesteren
 Maintainer: Erik-Jan van Kesteren <e.vankesteren1@uu.nl>
-Description: Perform Structural Equation Modeling using a TensorFlow
-    session. 
+Description: Use lavaan code to create structural equation models, use torch to estimate them. 
+    This package provides the interface between lavaan and python.
 License: GPL-3
 Encoding: UTF-8
 LazyData: true
-RoxygenNote: 7.0.2
 Imports: 
-    tensorflow,
     reticulate,
-    lavaan,
-    R6,
-    progress,
-    stringr,
-    methods
-Suggests: 
-    testthat
+    lavaan
+RoxygenNote: 7.1.0
