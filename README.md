@@ -4,12 +4,25 @@
   <span>
     <a href="https://travis-ci.org/vankesteren/tensorsem"><img src="https://travis-ci.org/vankesteren/tensorsem.svg?branch=master"></img></a>
   </span>
-  <h5 align="center">Structural Equation Modeling using TensorFlow</h5>
+  <h5 align="center">Structural Equation Modeling using Torch</h5>
 </p>
 <br/>
 
 ## Description
-An `R` and `python` package for structural equation modeling using `Torch`. This package is meant for researchers who know their way around SEM, python, and lavaan.
+An `R` and `python` package for structural equation modeling using `Torch`. This package is meant for researchers who know their way around SEM, Torch, and lavaan. 
+Structural equation modeling is implemented as a fully functional `torch.nn` module. A short example optimization loop would be:
+
+```python
+import tensorsem as ts
+model = ts.StructuralEquationModel(opt = opts)  # opts are of class SemOptions
+optim = torch.optim.Adam(model.parameters())  # init the optimizer
+for epoch in range(1000):
+    optim.zero_grad()  # reset the gradients of the parameters
+    Sigma = model()  # compute the model-implied covariance matrix
+    loss = ts.mvn_negloglik(dat, Sigma)  # compute the negative log-likelihood, dat tensor should exist
+    loss.backward()  # compute the gradients and store them in the parameter tensors
+    optim.step()  # take a step in the negative gradient direction using adam
+```
 
 ## Installation
 To install the latest version of `tensorsem`, run the following:
