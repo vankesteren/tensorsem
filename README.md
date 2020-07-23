@@ -3,6 +3,7 @@
   <br/>
   <span>
     <a href="https://travis-ci.org/vankesteren/tensorsem"><img src="https://travis-ci.org/vankesteren/tensorsem.svg?branch=master"></img></a>
+    <a href="https://zenodo.org/badge/latestdoi/168356695"><img src="https://zenodo.org/badge/168356695.svg" alt="DOI"></a>
   </span>
   <h5 align="center">Structural Equation Modeling using Torch</h5>
 </p>
