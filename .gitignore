@@ -125,3 +125,4 @@ dmypy.json
 .pyre/
 .Rproj.user
 .idea/
+.Rhistory
