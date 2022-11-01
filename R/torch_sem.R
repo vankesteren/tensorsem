@@ -4,28 +4,28 @@ library(lavaan)
 torch_sem <- nn_module(
   classname = "torch_sem",
 
-  initialize = function(opt, dtype = torch_float32()) {
+  initialize = function(model, dtype = torch_float32()) {
     # In The constructor we instantiate the parameter vector, its constraints,
     # as well as several helper lists and tensors for creating the model from
     # this parameter vector
     # :param opt_dict: dictionary from lav_to_tf_pars
-    # :param dtype: device type, default float32
+    # :param dtype: data type, default float32
 
-    self$opt <- opt
+    self$opt <- syntax_to_torch_opts(model)
 
     # initialize the parameter vector
-    self$dlt_vec <- nn_parameter(torch_tensor(opt$delta_start, dtype = dtype, requires_grad = TRUE))
+    self$dlt_vec <- nn_parameter(torch_tensor(self$opt$delta_start, dtype = dtype, requires_grad = TRUE))
 
     # initialize the parameter constraints
-    self$dlt_free <- torch_tensor(opt$delta_free, dtype = torch_bool(), requires_grad = FALSE)
-    self$dlt_value <- torch_tensor(opt$delta_value, dtype = dtype, requires_grad = FALSE)
+    self$dlt_free <- torch_tensor(self$opt$delta_free, dtype = torch_bool(), requires_grad = FALSE)
+    self$dlt_value <- torch_tensor(self$opt$delta_value, dtype = dtype, requires_grad = FALSE)
 
     # duplication indices transforming vech to vec for psi and theta
-    self$psi_dup_idx <- torch_tensor(dup_idx(opt$psi_shape[1]), dtype = torch_long(), requires_grad = FALSE)
-    self$tht_dup_idx <- torch_tensor(dup_idx(opt$tht_shape[1]), dtype = torch_long(), requires_grad = FALSE)
+    self$psi_dup_idx <- torch_tensor(dup_idx(self$opt$psi_shape[1]), dtype = torch_long(), requires_grad = FALSE)
+    self$tht_dup_idx <- torch_tensor(dup_idx(self$opt$tht_shape[1]), dtype = torch_long(), requires_grad = FALSE)
 
     # tensor identity matrix
-    self$I_mat <- torch_eye(opt$b_0_shape[1], dtype = dtype, requires_grad = FALSE)
+    self$I_mat <- torch_eye(self$opt$b_0_shape[1], dtype = dtype, requires_grad = FALSE)
   },
 
   forward = function(input) {
