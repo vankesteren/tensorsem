@@ -1,6 +1,5 @@
 # example analysis for SEM using pytorch
 library(tensorsem)
-library(torch)
 
 # parameters
 LRATE <- 0.01  # Adam learning rate
@@ -17,12 +16,11 @@ mod <- "
 "
 
 # create SEM torch model
-lav <- sem(mod, HolzingerSwineford1939, do.fit = FALSE)
 opts <- syntax_to_torch_opts(mod)
 tsem <- torch_sem(opts, dtype = DTYPE)
 
-# data
-dat <- torch_tensor(scale(lav@Data@X[[1]], scale = FALSE), requires_grad = FALSE)
+# data needs to be centered (torch_sem does not support mean structure)
+dat <- torch_tensor(scale(HolzingerSwineford1939[,7:15], scale = FALSE), requires_grad = FALSE)
 
 # optimization loop
 optim <- optim_adam(tsem$parameters, lr = LRATE)
@@ -53,20 +51,32 @@ for (epoch in 1:MAXIT) {
       break
 
   # print loss to monitor
-  if (epoch %% 100 == 1) cat("Epoch:", epoch, " loss:", ll_values[epoch], "\n")
+  if (epoch %% 20 == 1) cat("Epoch:", epoch, " loss:", ll_values[epoch], "\n")
 }
 
-plot(1:epoch, ll_values[1:epoch], type = "l")
+plot(1:epoch, -ll_values[1:epoch], type = "l", xlab = "epoch", ylab = "log-likelihood")
 
 
-# get parameter estimates from file and compare with lavaan
-pt_torch  <- partable_from_torch(read.csv("example/pars.csv"), mod)
-pt_lavaan <- parameterestimates(lavaan::sem(mod, HolzingerSwineford1939, std.lv = TRUE,
-                                            information = "observed",
-                                            fixed.x = FALSE))
+# Compare results with lavaan
+fit_lavaan <- sem(
+  model = mod,
+  data = HolzingerSwineford1939,
+  std.lv = TRUE,
+  information = "observed",
+  fixed.x = FALSE
+)
+pt_lavaan <- parameterestimates(fit_lavaan, remove.nonfree = TRUE)
 
-# Estimates
-cbind(pt_torch$est, pt_lavaan$est)
+# log-likelihood
+-loss$item()
+logLik(fit_lavaan)
 
-# Standard errors
-cbind(pt_torch$se, pt_lavaan$se)
+# Estimates & standard errors
+est <- as_array(tsem$free_params)
+
+loss <- mvn_negloglik(dat, tsem())
+hess <- tsem$Inverse_Hessian(loss)
+ses  <- hess |> torch_diag() |> torch_sqrt() |> as_array()
+
+# compare
+round(cbind(torch_est = est, torch_se = ses, lav_est = pt_lavaan$est, lav_se = pt_lavaan$se), 3)

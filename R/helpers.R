@@ -22,3 +22,15 @@ mvn_negloglik <- function(dat, Sigma) {
   mvn <- distr_multivariate_normal(loc = mu, covariance_matrix = Sigma)
   return(mvn$log_prob(dat)$mul(-1)$sum())
 }
+
+jacobian <- function(output, input) {
+  # Computes jacobian of output wrt input
+  # :param output: Tensor vector of size Po
+  # :param input: Tensor vector of size Pi
+  # :return: jacobian: Tensor of size Pi, Po
+  jac <- torch_zeros(output$shape[1], input$shape[1], dtype = input$dtype)
+  for (i in 1:output$shape[1])
+    jac[i] <- autograd_grad(output[i], input, retain_graph = TRUE)[[1]]
+
+  return(torch_t(jac))
+}

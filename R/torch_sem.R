@@ -2,7 +2,7 @@ library(torch)
 library(lavaan)
 
 torch_sem <- nn_module(
-  classname = "StructuralEquationModel",
+  classname = "torch_sem",
 
   initialize = function(opt, dtype = torch_float32()) {
     # In The constructor we instantiate the parameter vector, its constraints,
@@ -55,6 +55,27 @@ torch_sem <- nn_module(
       torch_add(self$Tht)
 
     return(self$Sigma)
-  }
+  },
+
+  Inverse_Hessian = function(loss) {
+    # Computes and returns the asymptotic covariance matrix of the parameters with
+    # respect to the loss function, to compute standard errors (sqrt(diag(ACOV)))
+    # :param loss: freshly computed loss function (for backwards pass)
+    # :return: ACOV tensor of the free parameters
+    g <- autograd_grad(loss, self$dlt_vec, create_graph = TRUE)[[1]]
+    H <- jacobian(g, self$dlt_vec)
+    free_idx <- torch_nonzero(self$dlt_free)$view(-1)
+    self$Hinv <- torch_inverse(H[free_idx, ][, free_idx])
+    return(self$Hinv)
+  },
+
+  active = list(
+    free_params = function(value) {
+      # Get or set the free parameter vector
+      # :return: Tensor with free parameters
+      if (!missing(value)) stop("setting free parameters not yet supported")
+      return(self$dlt_vec[torch_nonzero(self$dlt_free)$view(-1)])
+    }
+  )
 
 )
