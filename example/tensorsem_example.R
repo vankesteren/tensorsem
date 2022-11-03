@@ -1,14 +1,8 @@
 # example analysis for SEM using pytorch
 library(tensorsem)
 
-# Optimization parameters
-LRATE <- 0.01  # Adam learning rate
-TOL   <- 1e-20  # loss change tolerance
-MAXIT <- 5000  # maximum epochs
-DTYPE <- torch_float64()  # 64-bit precision
-
 # create a lavaan model for holzinger-swineford data
-mod <- "
+syntax <- "
   # three-factor model
   visual  =~ x1 + x2 + x3
   textual =~ x4 + x5 + x6
@@ -16,34 +10,13 @@ mod <- "
 "
 
 # create SEM torch model
-tsem <- torch_sem(mod, dtype = DTYPE)
+mod <- torch_sem(syntax, dtype = torch_float64())
 
 # data needs to be centered (torch_sem does not support mean structure)
-dat <- torch_tensor(scale(HolzingerSwineford1939[,7:15], scale = FALSE), requires_grad = FALSE)
+dat <- torch_tensor(scale(HolzingerSwineford1939[,7:15], scale = FALSE), requires_grad = FALSE, dtype = torch_float64())
 
-# optimization loop
-optim <- optim_adam(tsem$parameters, lr = LRATE)
-ll_values <- numeric(MAXIT)
-
-for (epoch in 1:MAXIT) {
-  optim$zero_grad() # reset gradients to 0
-  Sigma <- tsem() # compute the model-implied covariance matrix
-  loss <- mvn_negloglik(dat, Sigma) # compute the negative log-likelihood
-  ll_values[epoch] <- -loss$item() # record loss function
-  loss$backward() # compute the gradients and store them in the parameter tensors
-  optim$step()# take a step in the negative gradient direction using adam
-
-  # stop if no loglik change
-  if (epoch > 1)
-    if (abs(ll_values[epoch] - ll_values[epoch - 1]) < TOL)
-      break
-
-  # print loss
-  if (epoch %% 20 == 1) cat("Epoch:", epoch, " loglik:", ll_values[epoch], "\n")
-}
-
-plot(1:epoch, ll_values[1:epoch], type = "l", xlab = "epoch", ylab = "log-likelihood")
-
+# fit torch sem model using maximum likelihood
+mod$fit(dat)
 
 # Compare results with lavaan
 fit_lavaan <- sem(
@@ -53,19 +26,14 @@ fit_lavaan <- sem(
   information = "observed",
   fixed.x = FALSE
 )
-pt_lavaan <- parameterestimates(fit_lavaan, remove.nonfree = TRUE)
+pt_lavaan <- parameterestimates(fit_lavaan)
 
 # log-likelihood
-loss$item()
 logLik(fit_lavaan)
 
 # Estimates & standard errors
-est <- as_array(tsem$free_params)
-
-loss <- mvn_negloglik(dat, tsem())
-hess <- tsem$Inverse_Hessian(loss)
-ses  <- hess |> torch_diag() |> torch_sqrt() |> as_array()
+ll <- mvn_negloglik(dat, tsem())
+pt_torch <- tsem$partable(ll)
 
 # compare
-round(cbind(torch_est = est, torch_se = ses,
-            lav_est = pt_lavaan$est, lav_se = pt_lavaan$se), 3)
+cbind(pt_torch, lav_est = pt_lavaan$est, lav_se = pt_lavaan$se)

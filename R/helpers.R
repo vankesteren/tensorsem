@@ -1,4 +1,11 @@
-dup_idx <- function(n) {
+#' Constructs index vector for transforming a vech vector
+#' into a vec vector to create an n*n symmetric matrix
+#' from the vech vector.
+#' tensor$index_select(0, idx)$view(3,3)
+#'
+#' @param n size of the resulting square matrix
+#' @return array containing the indices
+vech_dup_idx <- function(n) {
   indices <- integer(n^2)
   cur_idx <- 0
   for (row in 0:(n-1)) {
@@ -13,24 +20,29 @@ dup_idx <- function(n) {
 }
 
 
-mvn_negloglik <- function(dat, Sigma) {
-  # Multivariate normal negative log-likelihood loss function for tensorsem nn module.
-  # :param dat: The centered dataset as a tensor
-  # :param Sigma: The model() implied covariance matrix
-  # :return: Tensor scalar negative log likelihood
-  mu <- torch_zeros(Sigma$shape[1], dtype = Sigma$dtype)
-  mvn <- distr_multivariate_normal(loc = mu, covariance_matrix = Sigma)
-  return(mvn$log_prob(dat)$mul(-1)$sum())
-}
-
-jacobian <- function(output, input) {
-  # Computes jacobian of output wrt input
-  # :param output: Tensor vector of size Po
-  # :param input: Tensor vector of size Pi
-  # :return: jacobian: Tensor of size Pi, Po
+#' Compute jacobian of output wrt input tensor
+#'
+#' @param output Tensor vector of size Po
+#' @param input Tensor vector of size Pi
+#'
+#' @return jacobian: Tensor of size Pi, Po
+torch_jacobian <- function(output, input) {
   jac <- torch_zeros(output$shape[1], input$shape[1], dtype = input$dtype)
   for (i in 1:output$shape[1])
     jac[i] <- autograd_grad(output[i], input, retain_graph = TRUE)[[1]]
 
   return(torch_t(jac))
+}
+
+
+#' Half-vectorization of square matrices
+#'
+#' @param x square (symmetric) matrix tensor
+#'
+#' @return column vector of stacked lower-diagonal elements
+torch_vech <- function(x) {
+  P <- x$shape[1]
+  Ps <- round(P*(P+1)/2)
+  idx_1d <- lavaan::lav_matrix_vech_idx(P)
+  return(x$view(-1)[idx_1d]$view(c(Ps, 1)))
 }
