@@ -1,40 +1,66 @@
 library(torch)
 library(lavaan)
 
+
+#' Structural equation model with a Torch backend
+#'
+#' Function for creating a structural equation model
+#'
+#' @param syntax lavaan syntax for the SEM model
+#' @param dtype (optional) torch dtype for the model (default torch_float32())
+#'
+#' @return A `torch_sem` object, which is an `nn_module` (torch object)
+#'
+#' @details
+#' This function instantiates a torch object for computing the model-implied covariance matrix
+#' based on a structural equation model. Through `torch`, gradients of this forward model can then
+#' be computed using backpropagation, and the parameters can be optimized using gradient-based
+#' optimization routines from the `torch` package.
+#'
+#' Because of this, it is easy to add additional penalties to the standard objective function,
+#' or to write a new objective function altogether.
+#'
+#' @export
 torch_sem <- nn_module(
   classname = "torch_sem",
 
-  initialize = function(syntax, dtype = torch_float32()) {
-    # In The constructor we instantiate the parameter vector, its constraints,
-    # as well as several helper lists and tensors for creating the model from
-    # this parameter vector
-    # :param opt_dict: dictionary from lav_to_tf_pars
-    # :param dtype: data type, default float32
 
+  initialize = function(syntax, dtype = torch_float32(), device = torch_device("cpu")) {
+    # store params
     self$syntax <- syntax
+    self$device <- device
+    self$dtype <- dtype
 
+    # compute torch settings
     self$opt <- syntax_to_torch_opts(syntax)
 
     # initialize the parameter vector
-    self$dlt_vec <- nn_parameter(torch_tensor(self$opt$delta_start, dtype = dtype, requires_grad = TRUE))
+    self$dlt_vec <- nn_parameter(torch_tensor(self$opt$delta_start, dtype = dtype, requires_grad = TRUE, device = device))
 
     # initialize the parameter constraints
-    self$dlt_free <- torch_tensor(self$opt$delta_free, dtype = torch_bool(), requires_grad = FALSE)
-    self$dlt_value <- torch_tensor(self$opt$delta_value, dtype = dtype, requires_grad = FALSE)
+    self$dlt_free <- torch_tensor(self$opt$delta_free, dtype = torch_bool(), requires_grad = FALSE, device = device)
+    self$dlt_value <- torch_tensor(self$opt$delta_value, dtype = dtype, requires_grad = FALSE, device = device)
 
     # duplication indices transforming vech to vec for psi and theta
-    self$psi_dup_idx <- torch_tensor(vech_dup_idx(self$opt$psi_shape[1]), dtype = torch_long(), requires_grad = FALSE)
-    self$tht_dup_idx <- torch_tensor(vech_dup_idx(self$opt$tht_shape[1]), dtype = torch_long(), requires_grad = FALSE)
+    self$psi_dup_idx <- torch_tensor(vech_dup_idx(self$opt$psi_shape[1]), dtype = torch_long(), requires_grad = FALSE, device = device)
+    self$tht_dup_idx <- torch_tensor(vech_dup_idx(self$opt$tht_shape[1]), dtype = torch_long(), requires_grad = FALSE, device = device)
 
     # tensor identity matrix
-    self$I_mat <- torch_eye(self$opt$b_0_shape[1], dtype = dtype, requires_grad = FALSE)
+    self$I_mat <- torch_eye(self$opt$b_0_shape[1], dtype = dtype, requires_grad = FALSE, device = device)
+
+    # mean is fixed to 0
+    self$mu <- torch_zeros(self$opt$tht_shape[1], dtype = self$dtype, requires_grad = FALSE, device = device)
   },
 
+  #' @description
+  #' Compute the model-implied covariance matrix.
+  #'
+  #' In the forward pass, we apply constraints to the parameter vector, and we
+  #' create matrix views from it to compute the model-implied covariance matrix.
+  #' Also accessible by calling the object itself as a function, e.g., `my_torch_sem()`.
+  #'
+  #' @return `torch_tensor` model-implied covariance matrix
   forward = function(input) {
-    # In the forward pass, we apply constraints to the parameter vector, and we
-    # create matrix views from it to compute the model-implied covariance matrix
-    # :return: model-implied covariance matrix tensor
-
     # apply constraints
     self$dlt <- torch_where(self$dlt_free, self$dlt_vec, self$dlt_value)
 
@@ -56,11 +82,14 @@ torch_sem <- nn_module(
     return(self$Sigma)
   },
 
+  #' @description
+  #' Compute and return the asymptotic covariance matrix of the parameters with
+  #' respect to the loss function, to compute standard errors (sqrt(diag(ACOV)))
+  #'
+  #' @param loss freshly computed loss function (for backwards pass)
+  #'
+  #' @return `torch_tensor` ACOV of the free parameters
   inverse_Hessian = function(loss) {
-    # Computes and returns the asymptotic covariance matrix of the parameters with
-    # respect to the loss function, to compute standard errors (sqrt(diag(ACOV)))
-    # :param loss: freshly computed loss function (for backwards pass)
-    # :return: ACOV tensor of the free parameters
     g <- autograd_grad(loss, self$dlt_vec, create_graph = TRUE)[[1]]
     H <- torch_jacobian(g, self$dlt_vec)
     free_idx <- torch_nonzero(self$dlt_free)$view(-1)
@@ -68,28 +97,57 @@ torch_sem <- nn_module(
     return(self$Hinv)
   },
 
+  #' @description
+  #' Compute and return observed information standard errors of the parameters, assuming
+  #' the loss function is the likelihood and the current estimates are ML estimates.
+  #'
+  #' @param loss freshly computed loss function (needed by torch for backwards pass)
+  #'
+  #' @return `vector` standard errors of the free parameters
   standard_errors = function(loss) {
     hess <- self$inverse_Hessian(loss)
-    return(hess$diag()$sqrt() |> as_array())
+    return(as_array(hess$diag()$sqrt()))
   },
 
-  partable = function(loss) {
+  #' @description
+  #' Create a lavaan-like parameter table from the current parameter estimates in the
+  #' torch_sem object.
+  #'
+  #' @param loss freshly computed loss function (needed by torch for backwards pass). Ignored if se = FALSE
+  #' @param se whether standard errors should be returned
+  #'
+  #' @return
+  partable = function(loss, se = TRUE) {
     fit <- lavaan::sem(self$syntax, std.lv = TRUE, information = "observed",
                        fixed.x = FALSE, do.fit = FALSE)
     pt <- lavaan::partable(fit)
     idx <- which(pt$free != 0)[unique(unlist(fit@Model@x.free.idx))]
     pt[idx,"est"] <- self$free_params
-    pt[idx,"se"] <- self$standard_errors(loss)
+    if (se) pt[idx,"se"] <- self$standard_errors(loss)
     return(pt)
   },
 
+  #' @description
+  #' Fit a torch_sem model using the default maximum likelihood objective.
+  #'
+  #' This function uses the Adam optimizer to estimate the parameters of a torch_sem
+  #'
+  #' @param dat dataset (centered!) as a `torch_tensor`
+  #' @param lrate learning rate of the Adam optimizer.
+  #' @param maxit maximum number of epochs to train the model
+  #' @param verbose whether to print progress to the console
+  #' @param tol parameter change tolerance for stopping training
+  #'
+  #' @seealso torch::optim_adam
+  #'
+  #' @return
   fit = function(dat, lrate = 0.01, maxit = 5000, verbose = TRUE, tol = 1e-20) {
     cat("Fitting SEM with Adam optimizer and MVN log-likelihood loss\n")
     optim <- optim_adam(self$parameters, lr = lrate)
     prev_loss <- 0.0
     for (epoch in 1:maxit) {
       optim$zero_grad()
-      loss <- mvn_negloglik(dat, tsem())
+      loss <- -self$loglik(dat)
       if (verbose) {
         cat("\rEpoch:", epoch, " loglik:", -loss$item())
         flush.console()
@@ -105,12 +163,19 @@ torch_sem <- nn_module(
     if (epoch == maxit) warning("maximum iterations reached")
   },
 
+  loglik = function(dat) {
+    px <- distr_multivariate_normal(loc = self$mu, covariance_matrix = self$forward())
+    px$log_prob(dat)$sum()
+  },
+
   active = list(
     free_params = function(value) {
       # Get or set the free parameter vector
       # :return: Tensor with free parameters
       if (!missing(value)) stop("setting free parameters not yet supported")
-      return(as_array(self$dlt_vec[torch_nonzero(self$dlt_free)$view(-1)]))
+      out <- self$dlt_vec[torch_nonzero(self$dlt_free)$view(-1)]
+      if (self$device$type == "cuda") return(as_array(out$cpu()))
+      return(as_array(out))
     }
   )
 

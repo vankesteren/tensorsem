@@ -10,17 +10,25 @@ syntax <- "
 "
 
 # create SEM torch model
-mod <- torch_sem(syntax, dtype = torch_float64())
+dev <- torch_device("cpu")
+mod <- torch_sem(syntax, dtype = torch_float64(), device = dev)
 
 # data needs to be centered (torch_sem does not support mean structure)
-dat <- torch_tensor(scale(HolzingerSwineford1939[,7:15], scale = FALSE), requires_grad = FALSE, dtype = torch_float64())
+dat <- torch_tensor(
+  data = scale(HolzingerSwineford1939[,7:15], scale = FALSE),
+  requires_grad = FALSE,
+  dtype = torch_float32(),
+  device = dev
+)
 
 # fit torch sem model using maximum likelihood
+t1 <- Sys.time()
 mod$fit(dat)
+Sys.time() - t1
 
 # Compare results with lavaan
 fit_lavaan <- sem(
-  model = mod,
+  model = syntax,
   data = HolzingerSwineford1939,
   std.lv = TRUE,
   information = "observed",
@@ -32,8 +40,8 @@ pt_lavaan <- parameterestimates(fit_lavaan)
 logLik(fit_lavaan)
 
 # Estimates & standard errors
-ll <- mvn_negloglik(dat, tsem())
-pt_torch <- tsem$partable(ll)
+ll <- mod$loglik(dat)
+pt_torch <- mod$partable(-ll)
 
 # compare
 cbind(pt_torch, lav_est = pt_lavaan$est, lav_se = pt_lavaan$se)

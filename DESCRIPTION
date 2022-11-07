@@ -12,4 +12,5 @@ LazyData: true
 Imports: 
     lavaan,
     torch
-RoxygenNote: 7.1.0
+RoxygenNote: 7.1.2
+Roxygen: list(markdown = TRUE)
