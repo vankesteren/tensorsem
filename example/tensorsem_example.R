@@ -1,4 +1,10 @@
-# example analysis for SEM using pytorch
+# Example analysis for SEM using pytorch
+#
+# In this file, we estimate the famous 3-factor
+# confirmatory factor analysis model using torch,
+# in four ways: Maximum Likelihood, Unweighted
+# Least Squares, Diagonally Weighted Least Squares,
+# and LASSO penalized.
 library(tensorsem)
 
 # create a lavaan model for holzinger-swineford data
@@ -22,9 +28,7 @@ dat <- torch_tensor(
 )
 
 # fit torch sem model using maximum likelihood
-t1 <- Sys.time()
 mod$fit(dat)
-Sys.time() - t1
 
 # Compare results with lavaan
 fit_lavaan <- sem(

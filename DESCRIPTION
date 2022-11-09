@@ -10,7 +10,10 @@ License: GPL-3
 Encoding: UTF-8
 LazyData: true
 Imports: 
-    lavaan,
-    torch
-RoxygenNote: 7.1.2
+    cli,
+    R6
+RoxygenNote: 7.2.1
 Roxygen: list(markdown = TRUE)
+Depends: 
+    torch,
+    lavaan
