@@ -126,3 +126,6 @@ dmypy.json
 .Rproj.user
 .idea/
 .Rhistory
+inst/doc
+/doc/
+/Meta/

@@ -17,3 +17,8 @@ Roxygen: list(markdown = TRUE)
 Depends: 
     torch,
     lavaan
+Suggests: 
+    rmarkdown,
+    knitr,
+    ggplot2
+VignetteBuilder: knitr

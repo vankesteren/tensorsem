@@ -18,3 +18,5 @@
 # R files
 ^.*\.Rproj$
 ^\.Rproj\.user$
+^doc$
+^Meta$
