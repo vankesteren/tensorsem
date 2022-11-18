@@ -173,15 +173,13 @@ the loss function is the likelihood and the current estimates are ML estimates.
 Create a lavaan-like parameter table from the current parameter estimates in the
 torch_sem object.
 \subsection{Usage}{
-\if{html}{\out{<div class="r">}}\preformatted{sem_Module$partable(loss, se = TRUE)}\if{html}{\out{</div>}}
+\if{html}{\out{<div class="r">}}\preformatted{sem_Module$partable(loss)}\if{html}{\out{</div>}}
 }
 
 \subsection{Arguments}{
 \if{html}{\out{<div class="arguments">}}
 \describe{
-\item{\code{loss}}{freshly computed loss function (needed by torch for backwards pass). Ignored if se = FALSE}
-
-\item{\code{se}}{whether standard errors should be returned}
+\item{\code{loss}}{(optional) freshly computed loss function to obtain standard errors.}
 }
 \if{html}{\out{</div>}}
 }

@@ -1,14 +1,4 @@
----
-title: "Custom loss functions for SEM"
-author: "Erik-Jan van Kesteren"
-output: rmarkdown::html_vignette
-vignette: >
-  %\VignetteIndexEntry{Custom loss functions for SEM}
-  %\VignetteEngine{knitr::rmarkdown}
-  %\VignetteEncoding{UTF-8}
----
-
-```{r, include = FALSE}
+## ---- include = FALSE---------------------------------------------------------
 knitr::opts_chunk$set(
   collapse = FALSE,
   comment = "#>",
@@ -17,20 +7,11 @@ knitr::opts_chunk$set(
   out.height = 4,
   warning = FALSE
 )
-```
 
-```{r setup}
+## ----setup--------------------------------------------------------------------
 library(tensorsem)
-```
 
-With `tensorsem` we can estimate structural equation models using maximum likelihood (ML), but we can also go beyond standard multivariate normal ML to estimate the parameters. For example, we can create a robust form of SEM by using a multivariate t-distribution instead of a multivariate normal distribution for the observations. We can also perform unweighted least squares, or weighted least squares. Lastly, we can put custom penalties on any parameter in the model. 
-
-The machinery that enables all these custom objective functions is automatic differentiation (through `torch`) and adaptive gradient-based optimization algorithms, such as `optim_adam`. In this vignette, we show how to do this.
-
-## Maximum likelihood estimation
-
-Maximum likelihood estimation is the default in `lavaan`, so that's what we'll compare to.
-```{r lavaan}
+## ----lavaan-------------------------------------------------------------------
 # Create model syntax
 syntax <- "
   # three-factor model
@@ -49,11 +30,8 @@ fit_lavaan <- sem(
 )
 
 pt_lavaan <- partable(fit_lavaan)
-```
 
-
-And, in order to visually compare the different estimation methods, we create a custom plot function:
-```{r paramplot}
+## ----paramplot----------------------------------------------------------------
 param_plot <- function(...) {
   ptli <- list(...)
   ptli <- lapply(names(ptli), function(n) {
@@ -70,11 +48,8 @@ param_plot <- function(...) {
 }
 
 param_plot(lavaan = pt_lavaan)
-```
 
-Now, we will estimate this same model using `tensorsem`:
-
-```{r tensorsem-ml}
+## ----tensorsem-ml-------------------------------------------------------------
 # initialize the SEM model object
 mod_ml <- torch_sem(syntax, dtype = torch_float64())
 
@@ -98,15 +73,8 @@ param_plot(
   torch_ml = pt_ml
 )
 
-```
 
-As we can see, the two methods yield practically the same parameter estimates and standard errors.
-
-# Robust t-distributed SEM
-
-Next, we'll change the loss function to the negative log-likelihood of a multivariate t-distribution with 2 degrees of freedom for each variable.
-
-```{r tdistribution}
+## ----tdistribution------------------------------------------------------------
 # Create a multivariate t log-likelihood distribution using torch operations
 # for reference, see here: https://docs.pyro.ai/en/stable/_modules/pyro/distributions/multivariate_studentt.html
 # note that that code is APACHE-2.0 licensed
@@ -125,11 +93,8 @@ mvt_loglik <- function(x, Sigma, nu = 2) {
   
   return(-0.5 * (nu + p) * D - C)
 }
-```
 
-Now, we will use this distribution as the loss function.
-
-```{r mvt_opt}
+## ----mvt_opt------------------------------------------------------------------
 # initialize the SEM model object
 mod_t <- torch_sem(syntax, dtype = torch_float64())
 
@@ -151,11 +116,8 @@ for (i in 1:iters) {
   opt$step()
 }
 
-```
 
-Then, we can plot the optimization trajectory to see whether it's converged:
-
-```{r mvtplot}
+## ----mvtplot------------------------------------------------------------------
 opt_plot <- function(losses) {
   ggplot2::ggplot(data.frame(x = 1:length(losses), y = losses), ggplot2::aes(x, y)) + 
     ggplot2::geom_line() +
@@ -163,15 +125,12 @@ opt_plot <- function(losses) {
 }
 opt_plot(loglik) +
   ggplot2::labs(x = "Epochs", y = "Log-Likelihood", title = "ML estimation of multivariate T SEM")
-```
 
-Then, we can again compare the parameter estimates:
-
-```{r mvtpars}
+## ----mvtpars------------------------------------------------------------------
 # re-compute the log-likelihood & create partable
 ll <- mvt_loglik(dat_torch, mod_t())$sum()
 pt_t <- mod_t$partable(-ll)
 
 # compare to lavaan
 param_plot(mvn = pt_ml, t = pt_t)
-```
+

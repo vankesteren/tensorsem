@@ -123,16 +123,15 @@ sem_Module <- R6::R6Class(
     #' @description
     #' Create a lavaan-like parameter table from the current parameter estimates in the
     #' torch_sem object.
-    #' @param loss freshly computed loss function (needed by torch for backwards pass). Ignored if se = FALSE
-    #' @param se whether standard errors should be returned
+    #' @param loss (optional) freshly computed loss function to obtain standard errors.
     #' @return lavaan partable object
-    partable = function(loss, se = TRUE) {
+    partable = function(loss) {
       fit <- lavaan::sem(self$syntax, std.lv = TRUE, information = "observed",
                          fixed.x = FALSE, do.fit = FALSE)
       pt <- lavaan::partable(fit)
       idx <- which(pt$free != 0)[unique(unlist(fit@Model@x.free.idx))]
       pt[idx,"est"] <- self$free_params
-      if (se) pt[idx,"se"] <- self$standard_errors(loss)
+      if (!missing(loss)) pt[idx,"se"] <- self$standard_errors(loss)
       return(pt)
     },
 
