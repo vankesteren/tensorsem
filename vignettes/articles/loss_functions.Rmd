@@ -129,7 +129,7 @@ Now, we will use this distribution as the loss function.
 mod_t <- torch_sem(syntax, dtype = torch_float64())
 
 # initialize at the ml estimates for faster convergence
-mod_t$dlt_vec <- as_array(mod_ml$dlt_vec)
+mod_t$load_state_dict(mod_ml$state_dict())
 
 # initialize the optimizer
 opt <- optim_adam(mod_t$parameters, lr = 0.01)
@@ -189,7 +189,7 @@ Let's try it out!
 mod_uls <- torch_sem(syntax, dtype = torch_float64())
 
 # initialize at the ml estimates for faster convergence
-mod_uls$dlt_vec <- as_array(mod_ml$dlt_vec)
+mod_uls$load_state_dict(mod_ml$state_dict())
 
 # initialize the optimizer
 opt <- optim_adam(mod_uls$parameters, lr = 0.01)
@@ -232,7 +232,7 @@ dwls_loss <- function(s, Sigma, w) {
 mod_dwls <- torch_sem(syntax, dtype = torch_float64())
 
 # initialize at the ml estimates for faster convergence
-# mod_dwls$dlt_vec <- as_array(mod_ml$dlt_vec)
+mod_dwls$load_state_dict(mod_ml$state_dict())
 
 # initialize the optimizer
 opt <- optim_adam(mod_dwls$parameters, lr = 0.01)
@@ -263,7 +263,6 @@ opt_plot(losses) +
 ```
 
 
-
 ```{r lspars}
 pt_uls <- mod_uls$partable()
 pt_dwls <- mod_dwls$partable()
@@ -271,3 +270,56 @@ pt_dwls <- mod_dwls$partable()
 # compare to lavaan
 param_plot(mvn = pt_ml, uls = pt_uls, dwls = pt_dwls)
 ```
+
+## Custom penalties
+
+Using a penalty we can automatically search for potential cross-loadings. We will do this by specifying an EFA, with LASSO penalties on the factor loadings
+
+
+```{r lasso_opt}
+# Create model syntax
+syntax <- "
+  # three-factor model
+  visual + textual + speed =~ x1 + x2 + x3 + x4 + x5 + x6 + x7 + x8 + x9
+"
+
+mod_efa <- torch_sem(syntax, dtype = torch_float64())
+mod_efa$load_state_dict(mod_ml$state_dict())
+
+# lambda is the penalty hyperparameter
+lambda <- torch_tensor(0.1)
+
+# initialize the optimizer
+opt <- optim_adam(mod_efa$parameters, lr = 0.01)
+
+
+# start the training loop
+iters <- 100L
+losses <- numeric(iters)
+for (i in 1:iters) {
+  opt$zero_grad()
+  Sigma <- mod_efa()
+  loss <- mvn_negloglik(dat_torch, Sigma) / 301 + lambda * mod_efa$Lam$abs()$sum()
+  losses[i] <- loss$item()
+  loss$backward()
+  opt$step()
+}
+```
+
+As always, we can plot the loss over training iterations:
+
+```{r lasso_plot}
+opt_plot(losses) +
+  ggplot2::labs(x = "Epochs", y = "Penalized SEM loss", title = "Penalized estimation of SEM")
+```
+
+Let's see whether the procedure allowed a cross-loading:
+
+```{r crossloading}
+round(as_array(mod_efa$Lam), 3)
+```
+
+It allowed a quite strong cross-loading between the factor "speed" and item "x9".
+
+
+

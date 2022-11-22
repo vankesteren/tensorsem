@@ -59,7 +59,7 @@ for (epoch in 1:MAXIT) {
 
 loss_uls <- loss_uls[1:epoch]
 plot(x = 1:epoch, y = loss_uls, xlab = "Epoch", ylab = "Loss value (ULS)", main = "Mediation model optimization", type = "l")
-pt_uls <- lavMatrixRepresentation(med_mod_uls$partable(se = FALSE))
+pt_uls <- lavMatrixRepresentation(med_mod_uls$partable())
 
 # save est as start vals for LASSO
 uls_state <- med_mod_uls$state_dict()
@@ -67,7 +67,7 @@ uls_state <- med_mod_uls$state_dict()
 
 # LASSO estimation
 med_mod_lasso <- torch_sem(med_syntax, dtype = DTYPE, device = DEVICE)
-med_mod_lasso$load_state_dict(uls_state)
+med_mod_lasso$dlt_vec <- as_array(med_mod_uls$dlt_vec$to(device = "cpu"))
 optim <- optim_adam(med_mod_lasso$parameters, lr = 0.001)
 loss_lasso <- numeric(MAXIT)
 for (epoch in 1:MAXIT) {
@@ -89,7 +89,7 @@ for (epoch in 1:MAXIT) {
 }
 loss_lasso <- loss_lasso[1:epoch]
 plot(x = 1:epoch, y = loss_lasso, xlab = "Epoch", ylab = "Loss value (LASSO)", main = "Mediation model optimization", type = "l")
-pt_lasso <- lavMatrixRepresentation(med_mod_lasso$partable(se = FALSE))
+pt_lasso <- lavMatrixRepresentation(med_mod_lasso$partable())
 
 
 

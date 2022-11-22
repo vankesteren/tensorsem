@@ -4,6 +4,7 @@
 #' @param Sigma The model() implied covariance matrix
 #'
 #' @return torch_tensor: scalar negative log likelihood
+#' @export
 mvn_negloglik <- function(dat, Sigma) {
   mu <- torch_zeros(Sigma$shape[1], dtype = Sigma$dtype)
   mvn <- distr_multivariate_normal(loc = mu, covariance_matrix = Sigma)

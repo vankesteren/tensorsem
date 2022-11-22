@@ -23,7 +23,7 @@ mod <- torch_sem(syntax, dtype = torch_float64(), device = dev)
 dat <- torch_tensor(
   data = scale(HolzingerSwineford1939[,7:15], scale = FALSE),
   requires_grad = FALSE,
-  dtype = torch_float32(),
+  dtype = torch_float64(),
   device = dev
 )
 

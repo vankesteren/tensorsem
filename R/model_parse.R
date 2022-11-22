@@ -73,20 +73,6 @@ lav_mod_to_torch_opts <- function(lav_mod) {
   ))
 }
 
-
-#' Export a torch options list to a file to be read by tensorsem
-#'
-#' Use the .pkl (pickle) extension
-#'
-#' @param opts options list
-#' @param filename path to save the list to
-#'
-#' @export
-torch_opts_to_file <- function(opts, filename = "opts.pkl") {
-  reticulate::py_save_object(opts, filename)
-}
-
-
 #' Create a lavaan parameter table from torch free_params output
 #'
 #' See examples in tensorsem for how to save the output.

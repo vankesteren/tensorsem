@@ -17,11 +17,20 @@
 #' Because of this, it is easy to add additional penalties to the standard objective function,
 #' or to write a new objective function altogether.
 #'
+#' @import torch
+#' @import lavaan
+#'
 #' @name torch_sem
 #'
 #' @export
 torch_sem <- function(syntax, dtype = torch_float32(), device = torch_device("cpu")) {
-  torch:::create_nn_module_callable(sem_Module$new(syntax, dtype, device))
+  instance <- sem_Module$new(syntax, dtype, device)
+
+  # code below is torch:::create_nn_module_callable
+  f <- instance$forward
+  attr(f, "class") <- instance$.classes
+  attr(f, "module") <- instance
+  f
 }
 
 #' @name torch_sem
