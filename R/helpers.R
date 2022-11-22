@@ -40,6 +40,8 @@ torch_jacobian <- function(output, input) {
 #' @param x square (symmetric) matrix tensor
 #'
 #' @return column vector of stacked lower-diagonal elements
+#'
+#' @export
 torch_vech <- function(x) {
   P <- x$shape[1]
   Ps <- round(P*(P+1)/2)

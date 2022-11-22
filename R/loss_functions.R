@@ -18,7 +18,7 @@ mvn_negloglik <- function(dat, Sigma) {
 #'
 #' @return torch_tensor: scalar loss function
 sem_fitfun <- function(S, Sigma) {
-  Sigma_chol <- torch_cholesky(Sigma)
+  Sigma_chol <- linalg_cholesky(Sigma)
 
   # sem fitting function is log-determinant + trace of S*sigma inv
   logdet <- 2 * torch_sum(torch_log(torch_diag(Sigma_chol)))
