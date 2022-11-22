@@ -20,3 +20,4 @@
 ^\.Rproj\.user$
 ^doc$
 ^Meta$
+^vignettes/articles$

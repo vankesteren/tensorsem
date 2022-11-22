@@ -125,6 +125,10 @@ dmypy.json
 .pyre/
 .Rproj.user
 .idea/
+
+# R stuff
 .Rhistory
 inst/doc
 /Meta/
+/doc/
+vignettes/articles/*_cache/

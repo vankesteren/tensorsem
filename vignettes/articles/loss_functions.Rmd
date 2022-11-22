@@ -1,21 +1,13 @@
 ---
-title: "Custom loss functions for SEM"
+title: "Custom loss functions for SEM with `tensorsem`"
 author: "Erik-Jan van Kesteren"
-output: rmarkdown::html_vignette
-vignette: >
-  %\VignetteIndexEntry{Custom loss functions for SEM}
-  %\VignetteEngine{knitr::rmarkdown}
-  %\VignetteEncoding{UTF-8}
 ---
 
 ```{r, include = FALSE}
 knitr::opts_chunk$set(
-  collapse = FALSE,
-  comment = "#>",
+  collapse = TRUE,
   cache = TRUE,
-  out.width = 7,
-  out.height = 4,
-  warning = FALSE
+  comment = "#>"
 )
 ```
 
@@ -23,13 +15,14 @@ knitr::opts_chunk$set(
 library(tensorsem)
 ```
 
-With `tensorsem` we can estimate structural equation models using maximum likelihood (ML), but we can also go beyond standard multivariate normal ML to estimate the parameters. For example, we can create a robust form of SEM by using a multivariate t-distribution instead of a multivariate normal distribution for the observations. We can also perform unweighted least squares, or weighted least squares. Lastly, we can put custom penalties on any parameter in the model. 
+With `tensorsem` we can estimate structural equation models using maximum likelihood (ML), but we can also go beyond standard multivariate normal ML to estimate the parameters. For example, we can create a robust form of SEM by using a multivariate t-distribution instead of a multivariate normal distribution for the observations. We can also perform unweighted least squares or weighted least squares. Lastly, we can put custom penalties on any parameter in the model. 
 
-The machinery that enables all these custom objective functions is automatic differentiation (through `torch`) and adaptive gradient-based optimization algorithms, such as `optim_adam`. In this vignette, we show how to do this.
+The machinery that enables all these custom objective functions is automatic differentiation (through `torch`) and adaptive gradient-based optimization algorithms, such as `optim_adam`. In this vignette, we show how this can be done.
 
 ## Maximum likelihood estimation
 
 Maximum likelihood estimation is the default in `lavaan`, so that's what we'll compare to.
+
 ```{r lavaan}
 # Create model syntax
 syntax <- "
@@ -62,7 +55,7 @@ param_plot <- function(...) {
     return(out)
   })
   Reduce(rbind, ptli) |> 
-    ggplot2::ggplot(ggplot2::aes(x = id, y = est, colour = method,
+    ggplot2::ggplot(ggplot2::aes(x = id, y = est, colour = forcats::as_factor(method),
                ymin = est - 1.96*se, ymax = est + 1.96*se)) + 
     ggplot2::geom_pointrange(position = ggplot2::position_dodge(width = .8)) +
     ggplot2::theme_minimal() +
@@ -102,13 +95,13 @@ param_plot(
 
 As we can see, the two methods yield practically the same parameter estimates and standard errors.
 
-# Robust t-distributed SEM
+## Robust t-distributed SEM
 
 Next, we'll change the loss function to the negative log-likelihood of a multivariate t-distribution with 2 degrees of freedom for each variable.
 
 ```{r tdistribution}
 # Create a multivariate t log-likelihood distribution using torch operations
-# for reference, see here: https://docs.pyro.ai/en/stable/_modules/pyro/distributions/multivariate_studentt.html
+# inspiration: https://docs.pyro.ai/en/stable/_modules/pyro/distributions/multivariate_studentt.html
 # note that that code is APACHE-2.0 licensed
 mvt_loglik <- function(x, Sigma, nu = 2) {
   p <- x$shape[2]
@@ -117,7 +110,9 @@ mvt_loglik <- function(x, Sigma, nu = 2) {
   Schol <- linalg_cholesky(Sigma)
 
   # constant term
-  C <- Schol$diag()$log()$sum() +  p/2*torch_log(nu) + p/2*log(pi) + torch_lgamma(nu / 2) - torch_lgamma((p + nu) / 2)
+  C <- Schol$diag()$log()$sum() +  p/2*torch_log(nu) + 
+    p/2*log(pi) + torch_lgamma(nu / 2) - 
+    torch_lgamma((p + nu) / 2)
   
   # data-dependent term
   y <- x$t()$triangular_solve(Schol, upper = FALSE)[[1]]
@@ -174,4 +169,105 @@ pt_t <- mod_t$partable(-ll)
 
 # compare to lavaan
 param_plot(mvn = pt_ml, t = pt_t)
+```
+
+## Unweighted and Diagonally weighted least squares
+
+By half-vectorizing the model-implied and observed covariance matrices, we can create versions of least squares for estimating SEM.
+
+```{r uls}
+uls_loss <- function(s, Sigma) {
+  r <- s - torch_vech(Sigma)
+  r$t()$mm(r)
+}
+```
+
+Let's try it out!
+
+```{r uls_opt}
+# initialize the SEM model object
+mod_uls <- torch_sem(syntax, dtype = torch_float64())
+
+# initialize at the ml estimates for faster convergence
+mod_uls$dlt_vec <- as_array(mod_ml$dlt_vec)
+
+# initialize the optimizer
+opt <- optim_adam(mod_uls$parameters, lr = 0.01)
+
+# compute s
+s <- torch_vech(dat_torch$t()$mm(dat_torch) / 301)
+
+# start the training loop
+iters <- 200L
+losses <- numeric(iters)
+for (i in 1:iters) {
+  opt$zero_grad()
+  Sigma <- mod_uls()
+  loss <- uls_loss(s, Sigma)
+  losses[i] <- loss$item()
+  loss$backward()
+  opt$step()
+}
+```
+
+Then, we can plot the loss path & compare parameters
+
+```{r ulsoptplot}
+opt_plot(losses) +
+  ggplot2::labs(x = "Epochs", y = "ULS loss", title = "ULS estimation of SEM")
+```
+
+
+Similarly, we can perform dwls by using the Asymptotic Distribution Free Gamma matrix
+
+```{r dwls}
+dwls_loss <- function(s, Sigma, w) {
+  r <- s - torch_vech(Sigma)
+  r$t()$mul(w)$mm(r)
+}
+```
+
+```{r dwls_opt}
+# initialize the SEM model object
+mod_dwls <- torch_sem(syntax, dtype = torch_float64())
+
+# initialize at the ml estimates for faster convergence
+# mod_dwls$dlt_vec <- as_array(mod_ml$dlt_vec)
+
+# initialize the optimizer
+opt <- optim_adam(mod_dwls$parameters, lr = 0.01)
+
+# compute weights for DWLS, based on
+# asymptotic distribution free Gamma matrix
+Gamma_ADF <- lavaan:::lavGamma(fit_lavaan)[[1]]
+w <- torch_tensor(1 / diag(Gamma_ADF), dtype = torch_float64(), requires_grad = FALSE)
+
+# start the training loop
+iters <- 200L
+losses <- numeric(iters)
+for (i in 1:iters) {
+  opt$zero_grad()
+  Sigma <- mod_dwls()
+  loss <- dwls_loss(s, Sigma, w)
+  losses[i] <- loss$item()
+  loss$backward()
+  opt$step()
+}
+```
+
+Then we can again plot the loss path
+
+```{r dwlsoptplot}
+opt_plot(losses) +
+  ggplot2::labs(x = "Epochs", y = "DWLS loss", title = "DWLS estimation of SEM")
+```
+
+
+
+```{r lspars}
+pt_uls <- mod_uls$partable()
+pt_dwls <- mod_dwls$partable()
+
+# compare to lavaan
+param_plot(mvn = pt_ml, uls = pt_uls, dwls = pt_dwls)
 ```
