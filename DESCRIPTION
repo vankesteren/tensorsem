@@ -1,15 +1,23 @@
 Package: tensorsem
 Type: Package
 Title: Estimate structural equation models using computation graphs
-Version: 1.0.0
+Version: 2.0.0
 Author: Erik-Jan van Kesteren
 Maintainer: Erik-Jan van Kesteren <e.vankesteren1@uu.nl>
 Description: Use lavaan code to create structural equation models, use torch to estimate them. 
-    This package provides the interface between lavaan and python.
+    This package provides the interface between lavaan and torch.
 License: GPL-3
 Encoding: UTF-8
 LazyData: true
 Imports: 
-    reticulate,
+    R6
+RoxygenNote: 7.2.2
+Roxygen: list(markdown = TRUE)
+Depends: 
+    torch,
     lavaan
-RoxygenNote: 7.1.0
+Suggests: 
+    rmarkdown,
+    knitr,
+    ggplot2
+VignetteBuilder: knitr
