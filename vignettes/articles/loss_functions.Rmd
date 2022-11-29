@@ -273,7 +273,7 @@ param_plot(mvn = pt_ml, uls = pt_uls, dwls = pt_dwls)
 
 ## Custom penalties
 
-Using a penalty we can automatically search for potential cross-loadings. We will do this by specifying an EFA, with LASSO penalties on the factor loadings
+Using a penalty we can adjust the maximum likelihood objective. For example, it is possible to specify an EFA, with L1 (LASSO) penalties on the factor loadings (in the Lambda matrix).
 
 
 ```{r lasso_opt}
@@ -281,20 +281,25 @@ Using a penalty we can automatically search for potential cross-loadings. We wil
 syntax <- "
   # three-factor model
   visual + textual + speed =~ x1 + x2 + x3 + x4 + x5 + x6 + x7 + x8 + x9
+  
+  # no correlations between the factors
+  visual ~~ 0*textual
+  visual ~~ 0*speed
+  textual ~~ 0*speed
 "
 
 mod_efa <- torch_sem(syntax, dtype = torch_float64())
 mod_efa$load_state_dict(mod_ml$state_dict())
 
 # lambda is the penalty hyperparameter
-lambda <- torch_tensor(0.1)
+lambda <- torch_tensor(0.15)
 
 # initialize the optimizer
 opt <- optim_adam(mod_efa$parameters, lr = 0.01)
 
 
 # start the training loop
-iters <- 100L
+iters <- 200L
 losses <- numeric(iters)
 for (i in 1:iters) {
   opt$zero_grad()
@@ -316,10 +321,13 @@ opt_plot(losses) +
 Let's see whether the procedure allowed a cross-loading:
 
 ```{r crossloading}
-round(as_array(mod_efa$Lam), 3)
+load <- as_array(mod_efa$Lam)
+colnames(load) <- c("visual", "textual", "speed")
+rownames(load) <- paste0("x", 1:9)
+round(load, 2)
 ```
 
-It allowed a quite strong cross-loading between the factor "speed" and item "x9".
+It allowed a quite strong cross-loading between the factor "speed" and item "x9", as well as between "textual" and "x1".
 
 
 
