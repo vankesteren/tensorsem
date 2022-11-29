@@ -2,7 +2,7 @@
   <img src="img/tensorsem.png" width="300px"></img>
   <br/>
   <span>
-    <a href="https://travis-ci.org/vankesteren/tensorsem"><img src="https://travis-ci.org/vankesteren/tensorsem.svg?branch=master"></img></a>
+    <a href="https://github.com/vankesteren/tensorsem/actions/workflows/rcmdcheck.yml"><img src="https://github.com/vankesteren/tensorsem/actions/workflows/rcmdcheck.yml/badge.svg"></img></a>
     <a href="https://zenodo.org/badge/latestdoi/168356695"><img src="https://zenodo.org/badge/168356695.svg" alt="DOI"></a>
   </span>
   <h5 align="center">Structural Equation Modeling using Torch</h5>
