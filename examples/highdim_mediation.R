@@ -116,19 +116,6 @@ tibble(
   theme(legend.position = "top")
 
 
-
-
-
-
-
-
-
-
-
-
-
-
-
 # now with majorization-minimization trick
 med_mod_lasso_mm <- torch_sem(med_syntax, dtype = DTYPE, device = DEVICE)
 med_mod_lasso_mm$load_state_dict(uls_state)

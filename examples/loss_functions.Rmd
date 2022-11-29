@@ -1,7 +1,12 @@
 ---
 title: "Custom loss functions for SEM with `tensorsem`"
 author: "Erik-Jan van Kesteren"
+output: 
+  md_document:
+    variant: gfm
 ---
+
+# Custom loss functions for SEM with `tensorsem`
 
 ```{r, include = FALSE}
 knitr::opts_chunk$set(

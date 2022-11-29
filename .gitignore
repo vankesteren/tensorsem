@@ -131,4 +131,4 @@ dmypy.json
 inst/doc
 /Meta/
 /doc/
-vignettes/articles/*_cache/
+examples/*_cache/

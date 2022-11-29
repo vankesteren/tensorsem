@@ -7,7 +7,7 @@
 ^bin$
 ^tensorsem$
 ^tensorsem\.egg-info$
-^example$
+^examples$
 
 # python files
 ^\.idea/.*$
