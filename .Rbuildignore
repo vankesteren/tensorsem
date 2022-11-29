@@ -8,6 +8,7 @@
 ^tensorsem$
 ^tensorsem\.egg-info$
 ^examples$
+^.github$
 
 # python files
 ^\.idea/.*$

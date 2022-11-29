@@ -19,6 +19,7 @@
 #'
 #' @import torch
 #' @import lavaan
+#' @importFrom R6 R6Class
 #'
 #' @name torch_sem
 #'
