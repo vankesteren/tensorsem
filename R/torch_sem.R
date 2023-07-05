@@ -153,6 +153,9 @@ sem_Module <- R6::R6Class(
     #' @param maxit maximum number of epochs to train the model
     #' @param verbose whether to print progress to the console
     #' @param tol parameter change tolerance for stopping training
+    #'
+    #' @seealso [df_to_tensor()]
+    #'
     #' @return self
     fit = function(dat, lrate = 0.01, maxit = 5000, verbose = TRUE, tol = 1e-20) {
       cat("Fitting SEM with Adam optimizer and MVN log-likelihood loss\n")

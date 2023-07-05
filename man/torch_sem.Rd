@@ -29,6 +29,9 @@ optimization routines from the \code{torch} package.
 Because of this, it is easy to add additional penalties to the standard objective function,
 or to write a new objective function altogether.
 }
+\seealso{
+\code{\link[=df_to_tensor]{df_to_tensor()}}
+}
 \section{Super class}{
 \code{torch::nn_Module} -> \code{torch_sem}
 }
@@ -64,6 +67,7 @@ or to write a new objective function altogether.
 <ul>
 <li><span class="pkg-link" data-pkg="torch" data-topic="nn_Module" data-id=".apply"><a href='../../torch/html/nn_Module.html#method-nn_Module-.apply'><code>torch::nn_Module$.apply()</code></a></span></li>
 <li><span class="pkg-link" data-pkg="torch" data-topic="nn_Module" data-id=".load_from_state_dict"><a href='../../torch/html/nn_Module.html#method-nn_Module-.load_from_state_dict'><code>torch::nn_Module$.load_from_state_dict()</code></a></span></li>
+<li><span class="pkg-link" data-pkg="torch" data-topic="nn_Module" data-id=".replace_values_from_table"><a href='../../torch/html/nn_Module.html#method-nn_Module-.replace_values_from_table'><code>torch::nn_Module$.replace_values_from_table()</code></a></span></li>
 <li><span class="pkg-link" data-pkg="torch" data-topic="nn_Module" data-id=".save_to_state_dict"><a href='../../torch/html/nn_Module.html#method-nn_Module-.save_to_state_dict'><code>torch::nn_Module$.save_to_state_dict()</code></a></span></li>
 <li><span class="pkg-link" data-pkg="torch" data-topic="nn_Module" data-id="add_module"><a href='../../torch/html/nn_Module.html#method-nn_Module-add_module'><code>torch::nn_Module$add_module()</code></a></span></li>
 <li><span class="pkg-link" data-pkg="torch" data-topic="nn_Module" data-id="apply"><a href='../../torch/html/nn_Module.html#method-nn_Module-apply'><code>torch::nn_Module$apply()</code></a></span></li>

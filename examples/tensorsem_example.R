@@ -20,12 +20,7 @@ dev <- torch_device("cpu")
 mod <- torch_sem(syntax, dtype = torch_float64(), device = dev)
 
 # data needs to be centered (torch_sem does not support mean structure)
-dat <- torch_tensor(
-  data = scale(HolzingerSwineford1939[,7:15], scale = FALSE),
-  requires_grad = FALSE,
-  dtype = torch_float64(),
-  device = dev
-)
+dat <- df_to_tensor(HolzingerSwineford1939[,7:15], dtype = torch_float64(), device = dev)
 
 # fit torch sem model using maximum likelihood
 mod$fit(dat)
