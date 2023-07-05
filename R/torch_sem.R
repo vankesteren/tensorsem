@@ -158,7 +158,7 @@ sem_Module <- R6::R6Class(
     #'
     #' @return self
     fit = function(dat, lrate = 0.01, maxit = 5000, verbose = TRUE, tol = 1e-20) {
-      cat("Fitting SEM with Adam optimizer and MVN log-likelihood loss\n")
+      if (verbose) cat("Fitting SEM with Adam optimizer and MVN log-likelihood loss\n")
       optim <- optim_adam(self$parameters, lr = lrate)
       prev_loss <- 0.0
       for (epoch in 1:maxit) {
