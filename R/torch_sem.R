@@ -23,10 +23,11 @@
 #'
 #' @name torch_sem
 #'
+#' @seealso [df_to_tensor()]
+#'
 #' @export
 torch_sem <- torch::nn_module(
   classname = "torch_sem",
-
   #' @section Methods:
   #'
   #' ## `$initialize()`

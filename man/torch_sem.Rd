@@ -28,6 +28,7 @@ optimization routines from the \code{torch} package.
 Because of this, it is easy to add additional penalties to the standard objective function,
 or to write a new objective function altogether.
 }
+
 \section{Fields}{
 
 \describe{
