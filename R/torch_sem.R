@@ -17,6 +17,16 @@
 #' Because of this, it is easy to add additional penalties to the standard objective function,
 #' or to write a new objective function altogether.
 #'
+#' @field dlt delta vector: all the parameters of the model (`torch_tensor`). Available after the first forward pass.
+#' @field free_params Vector of free parameters (R vector)
+#' @field Lam Lambda matrix (`torch_tensor`). Available after the first forward pass.
+#' @field Tht Theta matrix (`torch_tensor`). Available after the first forward pass.
+#' @field Psi Psi matrix (`torch_tensor`). Available after the first forward pass.
+#' @field B_0 B_0 matrix (`torch_tensor`). Available after the first forward pass.
+#' @field B B matrix (I - B_0) (`torch_tensor`). Available after the first forward pass.
+#' @field B_inv Inverse of B matrix (`torch_tensor`). Available after the first forward pass.
+#' @field Sigma Last computed Sigma matrix (`torch_tensor`). Available after the first forward pass.
+#'
 #' @import torch
 #' @import lavaan
 #' @importFrom R6 R6Class
@@ -25,21 +35,11 @@
 #'
 #' @seealso [df_to_tensor()]
 #'
+#' @example R/examples/torch_sem_example.R
+#'
 #' @export
 torch_sem <- torch::nn_module(
   classname = "torch_sem",
-  #' @section Methods:
-  #'
-  #' ## `$initialize()`
-  #' The initialize method. Don't use this, just use [torch_sem()]
-  #'
-  #' ### Arguments
-  #' - `syntax` lavaan syntax for the SEM model
-  #' - `dtype` (optional) torch dtype for the model (default torch_float32())
-  #' - `device` (optional) device type to put the model on. see [torch::torch_device()]
-  #'
-  #' ### Value
-  #' A `torch_sem` object, which is an `nn_module` (torch object)
   initialize = function(syntax, dtype = torch_float32(), device = torch_device("cpu")) {
     # store params
     self$syntax <- syntax
@@ -69,7 +69,11 @@ torch_sem <- torch::nn_module(
 
   #' @section Methods:
   #'
-  #' ## `$forward()`
+  #' ## Forward pass
+  #' ```
+  #' $forward()
+  #' ```
+  #'
   #' Compute the model-implied covariance matrix.
   #' Don't use this; `nn_modules` are callable, so access this method by calling
   #' the object itself as a function, e.g., `my_torch_sem()`.
@@ -102,7 +106,11 @@ torch_sem <- torch::nn_module(
 
   #' @section Methods:
   #'
-  #' ## `$inverse_Hessian(loss)`
+  #' ## Inverse Hessian
+  #' ```
+  #' $inverse_Hessian(loss)
+  #' ```
+  #'
   #' Compute and return the asymptotic covariance matrix of the parameters with
   #' respect to the loss function
   #'
@@ -122,7 +130,11 @@ torch_sem <- torch::nn_module(
 
   #' @section Methods:
   #'
-  #' ## `$standard_errors(loss)`
+  #' ## Standard errors
+  #' ```
+  #' $standard_errors(loss)
+  #' ```
+  #'
   #' Compute and return observed information standard errors of the
   #' parameters, assuming the loss function is the likelihood and the
   #' current estimates are ML estimates.
@@ -140,7 +152,10 @@ torch_sem <- torch::nn_module(
 
   #' @section Methods:
   #'
-  #' ## `$partable(loss)`
+  #' ## Parameter table
+  #' ```
+  #' $partable(loss)
+  #' ```
   #'
   #' Create a lavaan-like parameter table from the current parameter estimates in the
   #' torch_sem object.
@@ -163,7 +178,11 @@ torch_sem <- torch::nn_module(
 
   #' @section Methods:
   #'
-  #' ## `$fit(dat, lrate, maxit, verbose, tol)`
+  #' ## Maximum likelihood fitting
+  #' ```
+  #' $fit(dat, lrate, maxit, verbose, tol)
+  #' ```
+  #'
   #' Fit a torch_sem model using the default maximum likelihood objective.
   #' This function uses the Adam optimizer to estimate the parameters of a torch_sem
   #'
@@ -201,7 +220,11 @@ torch_sem <- torch::nn_module(
 
   #' @section Methods:
   #'
-  #' ## `$loglik(dat)`
+  #' ## Log-likelihood
+  #' ```
+  #' $loglik(dat)
+  #' ```
+  #'
   #' Multivariate normal log-likelihood of the data.
   #'
   #' ### Arguments
@@ -215,7 +238,6 @@ torch_sem <- torch::nn_module(
   },
 
   active = list(
-    #' @field free_params Vector of free parameters
     free_params = function() {
       out <- self$dlt_vec[torch_nonzero(self$dlt_free)$view(-1)]
       if (self$device$type != "cpu") return(as_array(out$cpu()))

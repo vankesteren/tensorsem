@@ -28,35 +28,34 @@ optimization routines from the \code{torch} package.
 Because of this, it is easy to add additional penalties to the standard objective function,
 or to write a new objective function altogether.
 }
-
 \section{Fields}{
 
 \describe{
-\item{\code{free_params}}{Vector of free parameters}
+\item{\code{dlt}}{delta vector: all the parameters of the model (\code{torch_tensor}). Available after the first forward pass.}
+
+\item{\code{free_params}}{Vector of free parameters (R vector)}
+
+\item{\code{Lam}}{Lambda matrix (\code{torch_tensor}). Available after the first forward pass.}
+
+\item{\code{Tht}}{Theta matrix (\code{torch_tensor}). Available after the first forward pass.}
+
+\item{\code{Psi}}{Psi matrix (\code{torch_tensor}). Available after the first forward pass.}
+
+\item{\code{B_0}}{B_0 matrix (\code{torch_tensor}). Available after the first forward pass.}
+
+\item{\code{B}}{B matrix (I - B_0) (\code{torch_tensor}). Available after the first forward pass.}
+
+\item{\code{B_inv}}{Inverse of B matrix (\code{torch_tensor}). Available after the first forward pass.}
+
+\item{\code{Sigma}}{Last computed Sigma matrix (\code{torch_tensor}). Available after the first forward pass.}
 }}
 
 \section{Methods}{
 
-\subsection{\verb{$initialize()}}{
+\subsection{Forward pass}{
 
-The initialize method. Don't use this, just use \code{\link[=torch_sem]{torch_sem()}}
-\subsection{Arguments}{
-\itemize{
-\item \code{syntax} lavaan syntax for the SEM model
-\item \code{dtype} (optional) torch dtype for the model (default torch_float32())
-\item \code{device} (optional) device type to put the model on. see \code{\link[torch:torch_device]{torch::torch_device()}}
-}
-}
-
-\subsection{Value}{
-
-A \code{torch_sem} object, which is an \code{nn_module} (torch object)
-}
-
-}
-
-
-\subsection{\verb{$forward()}}{
+\if{html}{\out{<div class="sourceCode">}}\preformatted{$forward()
+}\if{html}{\out{</div>}}
 
 Compute the model-implied covariance matrix.
 Don't use this; \code{nn_modules} are callable, so access this method by calling
@@ -71,7 +70,10 @@ A \code{torch_tensor} of the model-implied covariance matrix
 }
 
 
-\subsection{\verb{$inverse_Hessian(loss)}}{
+\subsection{Inverse Hessian}{
+
+\if{html}{\out{<div class="sourceCode">}}\preformatted{$inverse_Hessian(loss)
+}\if{html}{\out{</div>}}
 
 Compute and return the asymptotic covariance matrix of the parameters with
 respect to the loss function
@@ -90,7 +92,10 @@ A \code{torch_tensor}, representing the ACOV of the free parameters
 }
 
 
-\subsection{\verb{$standard_errors(loss)}}{
+\subsection{Standard errors}{
+
+\if{html}{\out{<div class="sourceCode">}}\preformatted{$standard_errors(loss)
+}\if{html}{\out{</div>}}
 
 Compute and return observed information standard errors of the
 parameters, assuming the loss function is the likelihood and the
@@ -110,7 +115,10 @@ A \verb{numeric vector} of standard errors of the free parameters
 }
 
 
-\subsection{\verb{$partable(loss)}}{
+\subsection{Parameter table}{
+
+\if{html}{\out{<div class="sourceCode">}}\preformatted{$partable(loss)
+}\if{html}{\out{</div>}}
 
 Create a lavaan-like parameter table from the current parameter estimates in the
 torch_sem object.
@@ -129,7 +137,10 @@ lavaan partable object
 }
 
 
-\subsection{\verb{$fit(dat, lrate, maxit, verbose, tol)}}{
+\subsection{Maximum likelihood fitting}{
+
+\if{html}{\out{<div class="sourceCode">}}\preformatted{$fit(dat, lrate, maxit, verbose, tol)
+}\if{html}{\out{</div>}}
 
 Fit a torch_sem model using the default maximum likelihood objective.
 This function uses the Adam optimizer to estimate the parameters of a torch_sem
@@ -151,7 +162,10 @@ Self, i.e., the \code{torch_sem} object with updated parameters
 }
 
 
-\subsection{\verb{$loglik(dat)}}{
+\subsection{Log-likelihood}{
+
+\if{html}{\out{<div class="sourceCode">}}\preformatted{$loglik(dat)
+}\if{html}{\out{</div>}}
 
 Multivariate normal log-likelihood of the data.
 \subsection{Arguments}{
@@ -168,3 +182,30 @@ Log-likelihood value (torch scalar)
 }
 }
 
+\examples{
+# create a lavaan syntax for holzinger-swineford data
+syntax <- "
+  # three-factor model
+  visual  =~ x1 + x2 + x3
+  textual =~ x4 + x5 + x6
+  speed   =~ x7 + x8 + x9
+"
+
+# create SEM torch model
+model <- torch_sem(syntax)
+
+# prepare dataset
+dat <- df_to_tensor(HolzingerSwineford1939[,7:15])
+
+# fit model
+model$fit(dat)
+
+# compute loss
+loss <- -model$loglik(dat)
+
+# show parameter table
+model$partable(loss)
+}
+\seealso{
+\code{\link[=df_to_tensor]{df_to_tensor()}}
+}
