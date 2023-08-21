@@ -10,6 +10,8 @@
 #'
 #' @return Torch tensor of scaled and processed data
 #'
+#' @importFrom stats model.matrix
+#'
 #' @seealso [torch::torch_tensor()], [stats::model.matrix()]
 #'
 #' @export
