@@ -13,7 +13,8 @@
 An `R`  package for structural equation modeling using `Torch`. This package is meant for researchers who know their way around SEM, Torch, and lavaan. 
 
 
-> Note: `tensorsem` used to be a combined `R` and `python` package, with model specification in `R` and estimation in `python`. To view and download version 1, go to [`v1.0`](https://github.com/vankesteren/tensorsem/tree/v1.0)
+> [!Note]
+> `tensorsem` used to be a combined `R` and `python` package, with model specification in `R` and estimation in `python`. To view and download version 1, go to [`v1.0`](https://github.com/vankesteren/tensorsem/tree/v1.0)
 
 Structural equation modeling is implemented as a fully functional `torch nn` module. A short example optimization loop would be:
 
